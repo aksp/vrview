@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>VR View - changing orientations</title>
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="../style.css" rel="stylesheet" type="text/css">
+
+    <script
+      src="https://code.jquery.com/jquery-3.1.1.min.js"
+      integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+      crossorigin="anonymous"></script>
+  </head>
+  <body>
+
+    <div id="vrview"></div>
+
+    <div id="controls">
+      <div id="toggleplay" class="paused"></div>
+      <div id="togglemute"></div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <br></br>
+        <div class="col-md-2 col-md-offset-2">
+            <button id="toggleorientation" class="btn btn-default" style="margin-left:100px">Switch viewpoint</button>
+        </div>
+        <div class="col-md-2">
+            <button id="toggleforcedcuts" class="btn btn-default" style="margin-left:100px">Switch to forced cuts</button>
+        </div>
+        <div class="col-md-2">
+            <button id="togglesubtitles" class="btn btn-default" style="margin-left:100px">Turn off subtitles</button>
+        </div>
+        
+      </div>
+    </div>
+
+    <script src="../../build/vrview.js"></script>
+    <script src="index.js"></script>
+  </body>
+</html>

@@ -7713,6 +7713,8 @@ function MouseKeyboardVRDisplay() {
   this.phi_ = 0;
   this.theta_ = 0;
 
+  this.emphasized_theta = 0;
+
   // Variables for keyboard-based rotation animation.
   this.targetAngle_ = null;
   this.angleAnimation_ = null;
@@ -7729,6 +7731,12 @@ function MouseKeyboardVRDisplay() {
   this.orientationOut_ = new Float32Array(4);
 }
 MouseKeyboardVRDisplay.prototype = new VRDisplay();
+
+// Amy 
+MouseKeyboardVRDisplay.prototype.setEmphasis = function(orientation) {
+  console.log("Set emphasis theta to: " + orientation)
+  this.emphasized_theta = orientation;
+}
 
 MouseKeyboardVRDisplay.prototype.getImmediatePose = function() {
   this.orientation_.setFromEulerYXZ(this.phi_, this.theta_, 0);
@@ -7749,6 +7757,21 @@ MouseKeyboardVRDisplay.prototype.getImmediatePose = function() {
 };
 
 MouseKeyboardVRDisplay.prototype.onKeyDown_ = function(e) {
+
+  // Amy - add emphasis via key speed
+  if (this.emphasized_theta !== undefined) {
+    var et = this.emphasized_theta;
+    var max_key_speed = 1.0;
+    var min_key_speed = .01;
+
+    var d1 = Math.abs(et - Math.abs(this.theta_ % (2*Math.PI))); 
+    var d2 = 2*Math.PI - d1;
+    var min_d = Math.min(d1, d2);
+
+    KEY_SPEED = (min_d / Math.PI) * (max_key_speed - min_key_speed) + min_key_speed;
+    KEY_ANIMATION_DURATION = 80;
+  }
+
   // Track WASD and arrow keys.
   if (e.keyCode == 38) { // Up key.
     this.animatePhi_(this.phi_ + KEY_SPEED);
@@ -7781,6 +7804,7 @@ MouseKeyboardVRDisplay.prototype.animateKeyTransitions_ = function(angleName, ta
   }
   var startAngle = this[angleName];
   var startTime = new Date();
+
   // Set up an interval timer to perform the animation.
   this.angleAnimation_ = requestAnimationFrame(function animate() {
     // Once we're finished the animation, we're done.
@@ -7796,6 +7820,7 @@ MouseKeyboardVRDisplay.prototype.animateKeyTransitions_ = function(angleName, ta
     var percent = elapsed / KEY_ANIMATION_DURATION;
     this[angleName] = startAngle + (targetAngle - startAngle) * percent;
   }.bind(this));
+
 };
 
 MouseKeyboardVRDisplay.prototype.onMouseDown_ = function(e) {
@@ -10099,7 +10124,7 @@ IFrameMessageReceiver.prototype = new EventEmitter();
 
 IFrameMessageReceiver.prototype.onMessage_ = function(event) {
   if (Util.isDebug()) {
-    console.log('onMessage_', event);
+    // console.log('onMessage_', event);
   }
 
   var message = event.data;
@@ -10115,6 +10140,12 @@ IFrameMessageReceiver.prototype.onMessage_ = function(event) {
     case Message.SET_VOLUME:
     case Message.ADD_HOTSPOT:
     case Message.PLAY:
+    case Message.SEEK:
+    case Message.EMPHASIZE:
+    case Message.SET_ORIENTATION:
+    case Message.SUBTITLE:
+    case Message.RECORD:
+    case Message.CURRENTTIME:
     case Message.PAUSE:
       // TODO(smus): Emit the event 
       this.emit(type, data);
@@ -10235,9 +10266,16 @@ var WorldRenderer = require('./world-renderer');
 var receiver = new IFrameMessageReceiver();
 receiver.on(Message.PLAY, onPlayRequest);
 receiver.on(Message.PAUSE, onPauseRequest);
+receiver.on(Message.SEEK, onSeekRequest);
+//receiver.on(Message.ROTATE, onRotateRequest);
+receiver.on(Message.EMPHASIZE, onEmphasizeRequest);
+receiver.on(Message.SUBTITLE, onSubtitleRequest);
+receiver.on(Message.RECORD, onRecordRequest);
+receiver.on(Message.CURRENTTIME, onCurrentTimeRequest);
 receiver.on(Message.ADD_HOTSPOT, onAddHotspot);
 receiver.on(Message.SET_CONTENT, onSetContent);
 receiver.on(Message.SET_VOLUME, onSetVolume);
+receiver.on(Message.SET_ORIENTATION, onSetOrientation);
 
 window.addEventListener('load', onLoad);
 
@@ -10299,6 +10337,12 @@ function onRenderLoad(event) {
     // Attach to pause and play events, to notify the API.
     event.videoElement.addEventListener('pause', onPause);
     event.videoElement.addEventListener('play', onPlay);
+    event.videoElement.addEventListener('seek', onSeek);
+    event.videoElement.addEventListener('rotate', onRotate);
+    event.videoElement.addEventListener('emphasize', onEmphasize);
+    event.videoElement.addEventListener('subtitle', onSubtitle);
+    event.videoElement.addEventListener('record', onRecord);
+    event.videoElement.addEventListener('currentTime', onCurrentTime);
   }
   // Hide loading indicator.
   loadIndicator.hide();
@@ -10318,7 +10362,130 @@ function onRenderLoad(event) {
   }
 }
 
+// Amy
+function onSeekRequest(seconds) {
+  // console.log("Trying to seek");
+  console.log(seconds);
+  if (!worldRenderer.videoProxy) {
+    return;
+  }
+  worldRenderer.videoProxy.seek(seconds);
+}
+
+// Amy
+// function onRotateRequest(rotation) {
+//   if (!worldRenderer.videoProxy) {
+//     return;
+//   }
+//   worldRenderer.vrDisplay.theta_ = rotation;
+// }
+
+// Amy
+function onEmphasizeRequest(rotation) {
+
+  if (!worldRenderer.videoProxy) {
+    return;
+  }
+  // AMYTODO: figure out how to emphasize certain areas
+  worldRenderer.vrDisplay.setEmphasis(rotation);
+}
+
+// Amy
+function displaySubtitle(subtitleText) {
+  // from - http://stackoverflow.com/questions/23351835/clickable-sprite-labels#comment35916361_23351835
+  // http://jsfiddle.net/J5d7h/11/
+  function textSprite(text, params) {
+      var font = "Arial",
+              size = 100,
+              color = "#ffff00";
+          padding = 10;
+
+      font = "bold " + size + "px " + font;
+
+      var canvas = document.createElement('canvas');
+      var context = canvas.getContext('2d');
+      context.font = font;
+
+      // get size data (height depends only on font size)
+      var metrics = context.measureText(text),
+          textWidth = metrics.width;
+
+      canvas.width = textWidth + 3;
+      canvas.height = size + 3;
+
+      context.font = font;
+      context.fillStyle = color;
+      context.fillText(text, 0, size + 3);
+      //context.style.border="3px solid blue";
+
+      // canvas contents will be used for a texture
+      var texture = new THREE.Texture(canvas);
+      texture.needsUpdate = true;
+
+      var mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(canvas.width, canvas.height),
+      new THREE.MeshBasicMaterial({
+          map: texture,
+          side: THREE.DoubleSide
+      }));
+      return mesh;
+  }
+
+  // Amy - function to create subtitle
+  var sprite = textSprite(subtitleText);
+  sprite.name = subtitleText;
+  sprite.scale.normalize().multiplyScalar(0.0009);
+  worldRenderer.camera.add( sprite );
+  sprite.position.set(0,-.3, -.6);
+}
+
+// Amy
+function removeSubtitle(subtitleText) {
+  var subtitle = worldRenderer.camera.getObjectByName(subtitleText);
+  worldRenderer.camera.remove(subtitle);
+  console.log("attempted to remove: " + subtitleText);
+}
+
+// Amy
+function onSubtitleRequest(subtitleText) {
+  var subtitle = worldRenderer.camera.getObjectByName(subtitleText); 
+  // var subtitle;
+  console.log("getObjectByName: " + subtitle);
+  if (subtitle) {
+    removeSubtitle(subtitleText);
+    console.log("Called removeSubtitle");
+  } else {
+    displaySubtitle(subtitleText);
+    console.log("Called displaySubtitle")
+  }
+}
+
+// Amy
+function onRecordRequest(b) {
+  if (!worldRenderer.videoProxy) {
+    return;
+  }
+  console.log("onRecordRequest");
+  if (b === "startRecording") {
+    worldRenderer.renderer.startRecording();
+  } else if (b === "stopRecording") {
+    worldRenderer.renderer.stopRecording();
+  } else {
+    console.log("Call record with startRecording or stopRecording");
+  }
+  
+}
+
+function onCurrentTimeRequest() {
+  // console.log("Trying to currentTime");
+  if (!worldRenderer.videoProxy) {
+    return;
+  }
+  worldRenderer.videoProxy.currentTime();
+}
+
 function onPlayRequest() {
+  // console.log("Trying to play");
   if (!worldRenderer.videoProxy) {
     onApiError('Attempt to pause, but no video found.');
     return;
@@ -10349,9 +10516,13 @@ function onAddHotspot(e) {
 }
 
 function onSetContent(e) {
+  var currentTime;
+
   if (Util.isDebug()) {
     console.log('onSetContent', e);
   }
+  currentTime = worldRenderer.videoProxy.currentTime;
+
   // Remove all of the hotspots.
   worldRenderer.hotspotRenderer.clearAll();
   // Fade to black.
@@ -10371,6 +10542,9 @@ function onSetContent(e) {
   }).then(function() {
     // Then fade the scene back in.
     worldRenderer.sphereRenderer.setOpacity(1, 500);
+    // worldRenderer.videoProxy.pause();
+    // worldRenderer.videoProxy.seek(currentTime);
+    // worldRenderer.videoProxy.play();
   });
 }
 
@@ -10381,6 +10555,13 @@ function onSetVolume(e) {
     return;
   }
   worldRenderer.videoProxy.setVolume(e.volumeLevel);
+}
+
+function onSetOrientation(orientation) {
+  if (!worldRenderer.videoProxy) {
+    return;
+  }
+  worldRenderer.vrDisplay.theta_ = orientation;
 }
 
 function onApiError(message) {
@@ -10409,6 +10590,48 @@ function onPlay() {
   Util.sendParentMessage({
     type: 'paused',
     data: false
+  });
+}
+
+function onSeek(m) {
+  Util.sendParentMessage({
+    type: 'seek',
+    data: m.data
+  });
+}
+
+function onRotate(m) {
+  Util.sendParentMessage({
+    type: 'rotate',
+    data: m.data
+  });
+}
+
+function onEmphasize(m) {
+  Util.sendParentMessage({
+    type: 'emphasize',
+    data: m.data
+  });
+}
+
+function onSubtitle(m) {
+  Util.sendParentMessage({
+    type: 'subtitle',
+    data: m.data
+  });
+}
+
+function onRecord(m) {
+  Util.sendParentMessage({
+    type: 'record',
+    data: m.data
+  });
+}
+
+function onCurrentTime() {
+  Util.sendParentMessage({
+    type: 'currenttime',
+    data: null
   });
 }
 
@@ -10847,7 +11070,9 @@ function VideoProxy(videoElement) {
 }
 
 VideoProxy.prototype.play = function() {
+
   if (Util.isIOS9OrLess()) {
+    console.log("isIOS9OrLess");
     this.startTime = performance.now();
     this.isFakePlayback = true;
 
@@ -10861,6 +11086,43 @@ VideoProxy.prototype.play = function() {
     });
   }
 };
+
+// Amy - to do, add IOS stuff
+VideoProxy.prototype.seek = function(seconds) {
+  // console.log(this.videoElement.currentTime);
+  this.videoElement.currentTime = seconds;
+  // console.log(this.videoElement.currentTime);
+}
+
+// Amy - to do, add IOS stuff
+VideoProxy.prototype.setOrientation = function(orientation) {
+  this.videoElement.orientation = orientation;
+}
+
+// Amy - to do, add IOS stuff
+VideoProxy.prototype.emphasize = function(rotation) {
+  this.videoElement.emphasize = rotation;
+}
+
+// Amy - maybe we'll use this
+// VideoProxy.prototype.record = function(r) {
+//   this.videoElement.record = r;
+// }
+
+// Amy - this is really hacky but just send the 
+// iframe an event with the current time in it
+VideoProxy.prototype.currentTime = function() {
+  var currentTime = this.videoElement.currentTime;
+  //console.log(currentTime);
+  var myCustomEvent = new CustomEvent('currenttimeanswer', {"detail": currentTime});
+  document.dispatchEvent(myCustomEvent);
+  return currentTime;
+  //console.log(this.videoElement.currentTime); 
+}
+
+// VideoProxy.prototype.subtitle = function(subtitleText){
+//   this.videoElement.subtitle = subtitleText;
+// }
 
 VideoProxy.prototype.pause = function() {
   if (Util.isIOS9OrLess() && this.isFakePlayback) {
@@ -10891,6 +11153,7 @@ VideoProxy.prototype.setVolume = function(volumeLevel) {
  * Called on RAF to progress playback.
  */
 VideoProxy.prototype.update = function() {
+
   // Fakes playback for iOS only.
   if (!this.isFakePlayback) {
     return;
@@ -10899,7 +11162,9 @@ VideoProxy.prototype.update = function() {
   var now = performance.now();
   var delta = now - this.startTime;
   var deltaS = delta / 1000;
+  
   this.videoElement.currentTime = deltaS;
+  
 
   // Loop through the video
   if (deltaS > duration) {
@@ -11166,7 +11431,6 @@ WorldRenderer.prototype.init_ = function() {
   this.scene = this.createScene_();
   this.scene.add(this.camera.parent);
 
-
   // Watch the resize event.
   window.addEventListener('resize', this.onResize_.bind(this));
 
@@ -11266,9 +11530,16 @@ module.exports = WorldRenderer;
 var Message = {
   PLAY: 'play',
   PAUSE: 'pause',
+  SEEK: 'seek',
+  CURRENTTIME: 'currenttime',
+  // ROTATE: 'rotate',
+  EMPHASIZE: 'emphasize',
+  SUBTITLE: 'subtitle',
+  RECORD: 'record',
   ADD_HOTSPOT: 'addhotspot',
   SET_CONTENT: 'setimage',
   SET_VOLUME: 'setvolume',
+  SET_ORIENTATION: 'setorientation',
   DEVICE_MOTION: 'devicemotion',
 };
 

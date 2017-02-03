@@ -330,6 +330,7 @@ function IFrameMessageSender(iframe) {
  * Sends a message to the associated VR View IFrame.
  */
 IFrameMessageSender.prototype.send = function(message) {
+  // console.log(message); 
   var iframeWindow = this.iframe.contentWindow;
   iframeWindow.postMessage(message, '*');
 };
@@ -480,6 +481,34 @@ Player.prototype.play = function() {
 Player.prototype.pause = function() {
   this.sender.send({type: Message.PAUSE});
 };
+
+// Amy - add a seek function
+Player.prototype.seek = function(seconds) {
+  this.sender.send({type: Message.SEEK, data: seconds});
+};
+
+// Amy - add a set orientation
+Player.prototype.setOrientation = function(orientation) {
+  this.sender.send({type: Message.SET_ORIENTATION, data: orientation});
+};
+
+// Amy - add a way to emphasize certain orientations
+Player.prototype.emphasize = function(rotation) {
+  this.sender.send({type: Message.EMPHASIZE, data: rotation});
+};
+
+// Amy - subtitle function (call once to apply, another time to remove)
+Player.prototype.subtitle = function(subtitle_text) {
+  this.sender.send({type: Message.SUBTITLE, data: subtitle_text});
+};
+
+Player.prototype.record = function(b) {
+  this.sender.send({type: Message.RECORD, data: b});
+};
+
+Player.prototype.currentTime = function() {
+  this.sender.send({type: Message.CURRENTTIME});
+}
 
 Player.prototype.setContent = function(contentInfo) {
   this.absolutifyPaths_(contentInfo);
@@ -654,10 +683,16 @@ module.exports = Player;
 var Message = {
   PLAY: 'play',
   PAUSE: 'pause',
+  CURRENTTIME: 'currenttime',
   ADD_HOTSPOT: 'addhotspot',
   SET_CONTENT: 'setimage',
   SET_VOLUME: 'setvolume',
+  SET_ORIENTATION: 'setorientation',
   DEVICE_MOTION: 'devicemotion',
+  SEEK: 'seek', // Amy - Add seek info
+  EMPHASIZE: 'emphasize',
+  SUBTITLE: 'subtitle',
+  RECORD: 'record',
 };
 
 module.exports = Message;

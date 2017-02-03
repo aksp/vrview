@@ -7692,6 +7692,100 @@ ShaderMaterial.prototype.toJSON = function ( meta ) {
 
 };
 
+// Amy - added SpriteMaterial and Sprite here
+function SpriteMaterial( parameters ) {
+
+	Material.call( this );
+
+	this.type = 'SpriteMaterial';
+
+	this.color = new Color( 0xffffff );
+	this.map = null;
+
+	this.rotation = 0;
+
+	this.fog = false;
+	this.lights = false;
+
+	this.setValues( parameters );
+
+}
+
+SpriteMaterial.prototype = Object.create( Material.prototype );
+SpriteMaterial.prototype.constructor = SpriteMaterial;
+
+SpriteMaterial.prototype.copy = function ( source ) {
+
+	Material.prototype.copy.call( this, source );
+
+	this.color.copy( source.color );
+	this.map = source.map;
+
+	this.rotation = source.rotation;
+
+	return this;
+
+};
+
+/**
+ * @author mikael emtinger / http://gomo.se/
+ * @author alteredq / http://alteredqualia.com/
+ */
+
+function Sprite( material ) {
+
+	Object3D.call( this );
+
+	this.type = 'Sprite';
+
+	this.material = ( material !== undefined ) ? material : new SpriteMaterial();
+
+}
+
+Sprite.prototype = Object.assign( Object.create( Object3D.prototype ), {
+
+	constructor: Sprite,
+
+	isSprite: true,
+
+	raycast: ( function () {
+
+		var matrixPosition = new Vector3();
+
+		return function raycast( raycaster, intersects ) {
+
+			matrixPosition.setFromMatrixPosition( this.matrixWorld );
+
+			var distanceSq = raycaster.ray.distanceSqToPoint( matrixPosition );
+			var guessSizeSq = this.scale.x * this.scale.y / 4;
+
+			if ( distanceSq > guessSizeSq ) {
+
+				return;
+
+			}
+
+			intersects.push( {
+
+				distance: Math.sqrt( distanceSq ),
+				point: this.position,
+				face: null,
+				object: this
+
+			} );
+
+		};
+
+	}() ),
+
+	clone: function () {
+
+		return new this.constructor( this.material ).copy( this );
+
+	}
+
+} );
+
 /**
  * @author mrdoob / http://mrdoob.com/
  * @author alteredq / http://alteredqualia.com/
@@ -19426,6 +19520,13 @@ function WebGLRenderer( parameters ) {
 
 	var lights = [];
 
+	this.recordingRenderData = {};
+	this.recordingOrientations = [];
+	this.recordingRenderInteractions = [];
+	this.lastUVXY = {x: -1000, y: -1000};
+	this.recording = false;
+
+
 	var opaqueObjects = [];
 	var opaqueObjectsLastIndex = - 1;
 	var transparentObjects = [];
@@ -20492,9 +20593,119 @@ function WebGLRenderer( parameters ) {
 
 	}
 
+	// Amy wrecking havoc
+	this.startRecording = function(){
+		this.recording = true;
+	}
+	this.stopRecording = function(){
+		console.log(JSON.stringify(this.recordingOrientations));
+		this.recording = false;
+	}
+
 	// Rendering
 
 	this.render = function ( scene, camera, renderTarget, forceClear ) {
+
+		function calculateLatitudeLongitude(x,y,z,R){
+			// http://stackoverflow.com/questions/5674149/3d-coordinates-on-a-sphere-to-latitude-and-longitude
+			var lat = 90 - (Math.acos(y / R)) * 180 / Math.PI;
+			var lon = -1.0*(((270 + (Math.atan2(x , z)) * 180 / Math.PI) % 360) -180);
+			return {lat: lat, lon: lon};
+		}
+
+		// Amy - putting recording function in a funny place, sorry!
+		if (this.recording && scene && camera && scene.getObjectByName("photo")
+			&& scene.getObjectByName("photo").children.length > 0) {
+
+			var sphere = scene.getObjectByName('photo').children[0]; 
+			var lookAtVector = new Vector3(0,0,-1);
+			lookAtVector.applyQuaternion(camera.quaternion);
+			var ray = new Ray(new Vector3(0,0,0), lookAtVector);
+			var raycaster = new Raycaster(ray.origin, ray.direction);
+			var intersection = raycaster.intersectObject(sphere);
+
+			if (intersection.length !== 0) {
+				if (Object.keys(this.recordingRenderData).length === 0) {
+					this.recordingRenderData = {
+						sphereParameters: sphere.geometry.parameters,
+						cameraParameters: {
+							near: camera.near,
+							far: camera.far,
+							fov: camera.fov,
+							aspect: camera.aspect,
+						},
+						sphere: sphere,
+					};
+					console.log("this.recordingRenderData:");
+					console.log(this.recordingRenderData);
+				}
+
+				var x = intersection[0].uv.x;
+				var y = intersection[0].uv.y;
+
+				var lastDiffx = Math.abs(x - this.lastUVXY.x);
+				var lastDiffy = Math.abs(y - this.lastUVXY.y);
+				
+				// if (lastDiffx > .001 || lastDiffy > .001) {
+				// if (lastDiffx > .01 || lastDiffy > .01) {
+				if (lastDiffx > -1 || lastDiffy > -1) {
+
+					// console.log(x + "," + y);
+					this.lastUVXY.x = x;
+					this.lastUVXY.y = y;
+					var d = new Date();
+					var time = d.getTime();
+
+					// Amy - calculate latitude and longitude				
+					var sphereX = intersection[0].point.x;
+					var sphereY = intersection[0].point.y;
+					var sphereZ = intersection[0].point.z;
+					var radius = sphere.geometry.parameters.radius;
+
+					var latlon = calculateLatitudeLongitude(sphereX, 
+											sphereY, sphereZ, radius);
+					
+					// var viewBoundaries = getViewingBoundaries(camera,sphere);
+
+					// console.log(latlon.lat + "," + latlon.lon); 
+
+					this.recordingRenderInteractions.push({
+						headUV: {
+							x: x, 
+							y: y
+						}, 
+						headLatLon: {
+							lat: latlon.lat, 
+							lon: latlon.lon
+						},
+						headForwardVector: {
+							x: lookAtVector.x,
+							y: lookAtVector.y,
+							z: lookAtVector.z
+						}, 
+						headQuaternion: {
+							w: camera.quaternion._w,
+							x: camera.quaternion._x,
+							y: camera.quaternion._y,
+							z: camera.quaternion._z
+						},
+						//viewBoundaries: viewBoundaries,
+						timestamp: time,
+					});
+
+					this.recordingOrientations.push({
+						rotation: latlon.lon,
+						timestamp: time,
+					});
+					//console.log(this.recordingRenderInteractions);
+				}
+			} else {
+				console.log("No intersection found: "); 
+				console.log(ray);
+				console.log(raycaster);
+				console.log(lookAtVector);
+			}
+		}
 
 		if ( camera !== undefined && camera.isCamera !== true ) {
 
@@ -23323,6 +23534,26 @@ function RingGeometry( innerRadius, outerRadius, thetaSegments, phiSegments, the
 RingGeometry.prototype = Object.create( Geometry.prototype );
 RingGeometry.prototype.constructor = RingGeometry;
 
+function PlaneGeometry( width, height, widthSegments, heightSegments ) {
+
+	Geometry.call( this );
+
+	this.type = 'PlaneGeometry';
+
+	this.parameters = {
+		width: width,
+		height: height,
+		widthSegments: widthSegments,
+		heightSegments: heightSegments
+	};
+
+	this.fromBufferGeometry( new PlaneBufferGeometry( width, height, widthSegments, heightSegments ) );
+
+}
+
+PlaneGeometry.prototype = Object.create( Geometry.prototype );
+PlaneGeometry.prototype.constructor = PlaneGeometry;
+
 /**
  * @author dmarcos / https://github.com/dmarcos
  * @author mrdoob / http://mrdoob.com
@@ -24088,6 +24319,12 @@ exports.RGBM16Encoding = RGBM16Encoding;
 exports.RGBDEncoding = RGBDEncoding;
 exports.BasicDepthPacking = BasicDepthPacking;
 exports.RGBADepthPacking = RGBADepthPacking;
+
+//Amy - adding some exports idk what I'm doing here
+exports.Texture = Texture;
+exports.SpriteMaterial = SpriteMaterial;
+exports.Sprite = Sprite;
+exports.PlaneGeometry = PlaneGeometry;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
