@@ -1,23 +1,22 @@
+API calls
+=======
 
+Ones implemented by google (see here: <http://developers.google.com/cardboard/vrview>): 
+* vrview.play()
+* vrview.pause()
 
+Ones I've implemented: 
+* vrview.seek(_seconds_) -- maybe only desktop? Not sure
+* vrview.setOrientation(_y-axis-rotation-in-radians_) -- Sets current camera orientation by rotating camera around y axis (works on desktop and cardboard)
+* vrview.subtitle(_subtitle-text_) -- If the subtitle isn't currently on the screen, it puts the new text on the screen, if it is on the screen, it removes it (works on desktop and cardboard)
 
+I'm not actually building the project using node. I'm just editing the following files: build/embed.js, build/vrview.js, build/three.js
 
-This is a branch of - VR View
+The video player with the ability to switch cuts is in the examples/orientations/ folder. Your URL should look something like this: "http://localhost/~apavel/360-video-project/vrview/examples/orientations/index.html?f=spec-files/nocuts.json". So, just navigate to examples/orientations/index.html then include the filename with the playback specifications (in this case spec-files/nocuts.json) after this signifier "?f=".
+
+Branched from: VR View
 =======
 
 VR View allows you to embed 360 degree VR media into websites on desktop and
 mobile. For more information, please read the documentation available at
 <http://developers.google.com/cardboard/vrview>.
-
-# Building
-
-This project uses browserify to manage dependencies and build.  Watchify is
-especially convenient to preserve the write-and-reload model of development.
-This package lives in the npm index.
-
-Relevant commands:
-
-    npm build - builds the iframe embed.
-    npm build-api - builds the JS API.
-    npm watch - auto-builds the iframe embed whenever any source changes.
-    npm watch-api - auto-builds the JS API code whenever any source changes.
