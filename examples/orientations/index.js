@@ -1,17 +1,5 @@
-/*
- * Copyright 2016 Google Inc. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Based on the example in ../video/ and edited heavily
+
 var vrView;
 var playButton;
 var muteButton;
@@ -19,10 +7,11 @@ var orientationButton;
 var forcedcutsButton;
 var subtitlesButton;
 
-amyPlayer = {
+// player settings
+playerSts = {
   currentTime: 0,
-  specs: {
-    fn: "spec-files/nocuts-simple.json", 
+  specs: { // specifications for playback
+    fn: null,
     mode: "optional_cuts",
     subtitles: true,
     playback: null,
@@ -62,14 +51,18 @@ function createPlayer(video_fn) {
 }
 
 function onLoad() {
+  var url = window.location.href; 
+  var q = url.split("?f=");
+  playerSts.specs.fn = q[q.length-1];
+
   // load playback instructions
-  if (amyPlayer.specs) {
-    $.getJSON(amyPlayer.specs.fn, function( data ) {
-      amyPlayer.specs.playback = data;
+  if (playerSts.specs) {
+    $.getJSON(playerSts.specs.fn, function( data ) {
+      playerSts.specs.playback = data;
 
       // todo: create player that cuts between multiple videos
-      if (amyPlayer.specs.playback.videos.length === 1) {
-        var video_fn = amyPlayer.specs.playback.videos[0].fn;
+      if (playerSts.specs.playback.videos.length === 1) {
+        var video_fn = playerSts.specs.playback.videos[0].fn;
         createPlayer(video_fn);
       }
     });
@@ -77,12 +70,12 @@ function onLoad() {
 }
 
 function getPossibleOrientations(){
-  if (amyPlayer.specs.playback !== null) {
+  if (playerSts.specs.playback !== null) {
 
     // get relevant orientation objects
-    var res = $(amyPlayer.specs.playback.orientation).filter(function(){
-      return this.start <= amyPlayer.currentTime 
-          && this.end > amyPlayer.currentTime;
+    var res = $(playerSts.specs.playback.orientation).filter(function(){
+      return this.start <= playerSts.currentTime 
+          && this.end > playerSts.currentTime;
     });
 
     // for each relevant orientation object, append possible orientations
@@ -106,10 +99,10 @@ function updateOrientation(){
 
     // if there are any possible orientations, we're just going 
     // to take the first one and trigger a cut
-    if (res !== null && res[0] !== amyPlayer.current_orientation) {
+    if (res !== null && res[0] !== playerSts.current_orientation) {
       var first_orientation = res[0];
       vrView.setOrientation(first_orientation);
-      amyPlayer.current_orientation = first_orientation;
+      playerSts.current_orientation = first_orientation;
     }
 }
 
@@ -120,35 +113,35 @@ function updateOrientationOptions(){
 
   // we're only going to update if the possible orientations have changed
   if (res !== null) {
-    if (!amyPlayer.specs.possible_orientations 
-      || amyPlayer.specs.possible_orientations.toString() !== res.toString()) {
-      amyPlayer.specs.possible_orientations = res;
-      amyPlayer.specs.next_orientation_i = 0;
+    if (!playerSts.specs.possible_orientations 
+      || playerSts.specs.possible_orientations.toString() !== res.toString()) {
+      playerSts.specs.possible_orientations = res;
+      playerSts.specs.next_orientation_i = 0;
     }
   }
 }
 
 function updateSubtitle() {
   // get relevant subtitles
-  var res = $(amyPlayer.specs.playback.subtitles).filter(function(){
-      return this.start <= amyPlayer.currentTime 
-          && this.end > amyPlayer.currentTime;
+  var res = $(playerSts.specs.playback.subtitles).filter(function(){
+      return this.start <= playerSts.currentTime 
+          && this.end > playerSts.currentTime;
   });
 
   if (res.length > 0 
       && res[0] 
       && res[0].text 
-      && res[0].text !== amyPlayer.current_subtitle) {
+      && res[0].text !== playerSts.current_subtitle) {
 
     // remove existing subtitle if there is one
-    if ( amyPlayer.current_subtitle ) {
-      vrView.subtitle( amyPlayer.current_subtitle ) ;
-      amyPlayer.current_subtitle = undefined ;
+    if ( playerSts.current_subtitle ) {
+      vrView.subtitle( playerSts.current_subtitle ) ;
+      playerSts.current_subtitle = undefined ;
     }
 
     var subtitleText = res[0].text ;
     vrView.subtitle( subtitleText ); 
-    amyPlayer.current_subtitle = subtitleText ;
+    playerSts.current_subtitle = subtitleText ;
   }
 }
 
@@ -157,16 +150,16 @@ function listenForCurrentTime() {
   iframe = getIframedocument();
   iframe.addEventListener("currenttimeanswer" , function(e){
     // update that current time!
-    amyPlayer.currentTime = e.detail;
+    playerSts.currentTime = e.detail;
     
     // also, update the orientation accordingly
-    if (amyPlayer.specs.mode === "optional_cuts") {
+    if (playerSts.specs.mode === "optional_cuts") {
       updateOrientationOptions();
-    } else if (amyPlayer.specs.mode === "forced_cuts") {
+    } else if (playerSts.specs.mode === "forced_cuts") {
       updateOrientation();
     }
 
-    if (amyPlayer.specs.subtitles) {
+    if (playerSts.specs.subtitles) {
       updateSubtitle();
     }
     
@@ -199,8 +192,8 @@ function onVRViewReady() {
 }
 
 function onToggleOrientation() {
-  var orientations = amyPlayer.specs.possible_orientations;
-  var i = amyPlayer.specs.next_orientation_i;
+  var orientations = playerSts.specs.possible_orientations;
+  var i = playerSts.specs.next_orientation_i;
   console.log(orientations);
   console.log(i);
   if (orientations.length > 0 && i !== undefined) {
@@ -209,9 +202,9 @@ function onToggleOrientation() {
 
     // figure out the next orientation_i;
     if ( i + 1 < orientations.length ) {
-      amyPlayer.specs.next_orientation_i = i + 1;
+      playerSts.specs.next_orientation_i = i + 1;
     } else {
-      amyPlayer.specs.next_orientation_i = 0;
+      playerSts.specs.next_orientation_i = 0;
     }
   }
 }
@@ -244,25 +237,25 @@ function onToggleMute() {
 }
 
 function onToggleForcedCuts() {
-  if (amyPlayer.specs.mode === "forced_cuts") {
-    amyPlayer.specs.mode = "optional_cuts";
+  if (playerSts.specs.mode === "forced_cuts") {
+    playerSts.specs.mode = "optional_cuts";
     $(forcedcutsButton).text("Switch to forced cuts");
     $(orientationButton).removeClass("disabled");
-  } else if (amyPlayer.specs.mode === "optional_cuts"){
-    amyPlayer.specs.mode = "forced_cuts";
+  } else if (playerSts.specs.mode === "optional_cuts"){
+    playerSts.specs.mode = "forced_cuts";
     $(forcedcutsButton).text("Switch to optional cuts");
     $(orientationButton).addClass("disabled");
   }
 }
 
 function onToggleSubtitles() {
-  if (amyPlayer.specs.subtitles) {
+  if (playerSts.specs.subtitles) {
     $(subtitlesButton).text("Turn on subtitles");
-    amyPlayer.specs.subtitles = false;
-    vrView.subtitle(amyPlayer.current_subtitle);
+    playerSts.specs.subtitles = false;
+    vrView.subtitle(playerSts.current_subtitle);
   } else {
     $(subtitlesButton).text("Turn off subtitles");
-    amyPlayer.specs.subtitles = true;
+    playerSts.specs.subtitles = true;
   }
 }
 
