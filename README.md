@@ -5,10 +5,13 @@ Ones implemented by google (see here: <http://developers.google.com/cardboard/vr
 * vrview.play()
 * vrview.pause()
 
-Ones I've implemented: 
-* vrview.seek(_seconds_) -- maybe only desktop? Not sure
-* vrview.setOrientation(_y-axis-rotation-in-radians_) -- Sets current camera orientation by rotating camera around y axis (works on desktop and cardboard)
-* vrview.subtitle(_subtitle-text_) -- If the subtitle isn't currently on the screen, it puts the new text on the screen, if it is on the screen, it removes it (works on desktop and cardboard)
+Ones I've implemented that work on both desktop and cardboard/mobile: 
+* vrview.setOrientation(_y-axis-rotation-in-radians_) -- Sets current camera orientation by rotating camera around y axis 
+* vrview.subtitle(_subtitle-text_) -- If the subtitle isn't currently on the screen, it puts the new text on the screen, if it is on the screen, it removes it 
+
+Ones I've implemented that work on desktop (may work on cardboard) and are only partially finished:
+* vrview.seek(_seconds_) -- Seeks to number of seconds within the video
+* vrview.record(_"startRecording"_ or _"stopRecording"_) -- Starts and stops recording the user interactions. When it stops recording, right now it just console.logs timestamps with the rotations (longitude only for now). Needs some work to match up timestamps to video playback time.
 
 I'm not actually building the project using node. I'm just editing the following files: build/embed.js, build/vrview.js, build/three.js
 
