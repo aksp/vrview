@@ -12,7 +12,9 @@ Ones I've implemented:
 
 I'm not actually building the project using node. I'm just editing the following files: build/embed.js, build/vrview.js, build/three.js
 
-The video player with the ability to switch cuts is in the examples/orientations/ folder. Your URL should look something like this: "http://localhost/~apavel/360-video-project/vrview/examples/orientations/index.html?f=spec-files/nocuts.json". So, just navigate to examples/orientations/index.html then include the filename with the playback specifications (in this case spec-files/nocuts.json) after this signifier "?f=".
+The video player with the ability to switch cuts is in the examples/orientations/ folder. Your URL should look something like this: "http://localhost/~apavel/360-video-project/vrview/examples/orientations/index.html?f=spec-files/nocuts.json". So, just navigate to examples/orientations/index.html then include the filename with the playback specifications (in this case spec-files/nocuts.json) after this signifier "?f=".  
+
+You'll also want to download the video I've been using here: https://people.eecs.berkeley.edu/~amypavel/vrview/examples/orientations/nocuts.MP4. You may have to change the video path in spec-files/nocuts.json.
 
 Branched from: VR View
 =======
