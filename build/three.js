@@ -23645,40 +23645,6 @@ THREE.VRControls = function ( object, onError ) { // Amy, "object" is the camera
 
 			if ( pose.orientation !== null ) {
 
-				// Amy - if we have a orientationOffset and its new, apply it now
-				if ( this.orientationOffset 
-					&& this.orientationOffset.theta !== null) {
-					console.log("Trying to change orientation to: " + this.orientationOffset.theta);
-
-					var new_orientation_euler = new Euler(this.orientationOffset.phi, 
-														  this.orientationOffset.theta, 
-														  0);
-					object.quaternion.setFromEuler(new_orientation_euler);
-					this.orientationOffset.fresh = false;
-
-
-				// } else if ( this.orientationOffset && !this.orientationOffset.fresh && this.orientationOffset.theta !== 0) {
-				// 	// object.quaternion.fromArray( pose.orientation );
-
-				// 	var current_quaternion = new Quaternion();
-				// 	current_quaternion.fromArray( pose.orientation );
-
-				// 	// var rotation_quaternion = new Quaternion()
-				// 	// 				.setFromAxisAngle( Vector3(0,0,1), 
-				// 	// 								   this.orientationOffset.theta );
-
-				// 	var current_pose_euler = new Euler();
-				// 	current_pose_euler.setFromQuaternion( current_quaternion );
-				// 	current_pose_euler.y = current_pose_euler.y + this.orientationOffset.theta;
-
-				// 	var new_pose = new Quaternion();
-				// 	new_pose.setFromEuler( current_pose_euler );
-
-				// 	object.quaternion.set( new_pose.x, new_pose.y, new_pose.z, new_pose.w ); // Amy  - hacky set camera orientation
-
-				} else {
-					object.quaternion.fromArray( pose.orientation ); 	
-				}
 				object.quaternion.fromArray( pose.orientation ); 	
 			}
 
