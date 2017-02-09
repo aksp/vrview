@@ -175,6 +175,30 @@ function listenForCurrentTime() {
 var firstTimePlay = true;
 VIDEO_START_TIME = null;
 
+function isTouchCardboardButton(e) {
+  var clientHeight = e.target.clientHeight;
+  var clientWidth = e.target.clientWidth;
+
+  var firstTouch = e.originalEvent.touches[0];
+  var x = firstTouch.clientX;
+  var y = firstTouch.clientY;
+
+  // if the x is between 40%-60% of width and y is in top 20%
+  // TODO: also check cardboard mode
+  if ( x/clientWidth > .4 && x/clientWidth < .6
+    && y/clientHeight < .2 ) {
+    console.log("Detected cardboard touch");
+    return true;
+  } else {
+    return false;
+  }
+}
+
+function onCardboardButtonPress() {
+  // for now we're just going to change the orientation
+  onToggleOrientation();
+}
+
 function onVRViewReady() {
   vrView.pause();
 
@@ -189,6 +213,12 @@ function onVRViewReady() {
     playButton.classList.remove('paused');
   }
   listenForCurrentTime();
+
+  $(getIframedocument()).on('touchstart', function(e){
+      if (isTouchCardboardButton(e)) {
+        onCardboardButtonPress();
+      }
+  });
 }
 
 function onToggleOrientation() {
