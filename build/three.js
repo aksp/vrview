@@ -20613,9 +20613,13 @@ function WebGLRenderer( parameters ) {
 			return {lat: lat, lon: lon};
 		}
 
+		// var d = new Date();
+		// var startTime = d.getTime();
+
 		// Amy - putting recording function in a funny place, sorry!
 		if (this.recording && scene && camera && scene.getObjectByName("photo")
 			&& scene.getObjectByName("photo").children.length > 0) {
+
 
 			var sphere = scene.getObjectByName('photo').children[0]; 
 			var lookAtVector = new Vector3(0,0,-1);
@@ -20623,6 +20627,10 @@ function WebGLRenderer( parameters ) {
 			var ray = new Ray(new Vector3(0,0,0), lookAtVector);
 			var raycaster = new Raycaster(ray.origin, ray.direction);
 			var intersection = raycaster.intersectObject(sphere);
+
+			// var d = new Date();
+			// var intersectionTime = d.getTime();
+			// console.log("time after intersection: "  + intersectionTime - startTime);
 
 			if (intersection.length !== 0) {
 				if (Object.keys(this.recordingRenderData).length === 0) {
@@ -20664,6 +20672,9 @@ function WebGLRenderer( parameters ) {
 
 					var latlon = calculateLatitudeLongitude(sphereX, 
 											sphereY, sphereZ, radius);
+
+					// var d = new Date();
+					// console.log("Time after lat lon: " + d.getTime() - intersectionTime);
 					
 					// var viewBoundaries = getViewingBoundaries(camera,sphere);
 

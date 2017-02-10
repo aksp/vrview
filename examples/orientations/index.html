@@ -5,6 +5,7 @@
     <meta name=viewport content="width=device-width, initial-scale=1">
     <meta charset="utf-8" />
 
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" type="text/css">
     <link href="../style.css" rel="stylesheet" type="text/css">
 
@@ -12,6 +13,8 @@
       src="https://code.jquery.com/jquery-3.1.1.min.js"
       integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
       crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
   </head>
   <body>
 
@@ -24,6 +27,21 @@
 
     <div class="container">
       <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+          <div id="slider" style="margin-top:-25px"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-1 col-md-offset-2">
+          <div id="currentTime">0</div>
+        </div>
+        <div class="col-md-6">
+          <textarea id="spec-composer" style="width:100%" hidden></textarea>
+        </div>
+      </div>
+
+      <div class="row">
         <br></br>
         <div class="col-md-2 col-md-offset-2">
             <button id="toggleorientation" class="btn btn-default" style="margin-left:100px">Switch viewpoint</button>
@@ -35,6 +53,10 @@
             <button id="togglesubtitles" class="btn btn-default" style="margin-left:100px">Turn off subtitles</button>
         </div>
         
+      </div>
+      <div class="row">
+        <!-- fake video player for getting duration -->
+        <div id="fake-video-player"></div>
       </div>
     </div>
 

@@ -10647,7 +10647,6 @@ var receiver = new IFrameMessageReceiver();
 receiver.on(Message.PLAY, onPlayRequest);
 receiver.on(Message.PAUSE, onPauseRequest);
 receiver.on(Message.SEEK, onSeekRequest);
-//receiver.on(Message.ROTATE, onRotateRequest);
 receiver.on(Message.EMPHASIZE, onEmphasizeRequest);
 receiver.on(Message.SUBTITLE, onSubtitleRequest);
 receiver.on(Message.RECORD, onRecordRequest);
@@ -10719,7 +10718,6 @@ function onRenderLoad(event) {
     event.videoElement.addEventListener('pause', onPause);
     event.videoElement.addEventListener('play', onPlay);
     event.videoElement.addEventListener('seek', onSeek);
-    event.videoElement.addEventListener('rotate', onRotate);
     event.videoElement.addEventListener('emphasize', onEmphasize);
     event.videoElement.addEventListener('subtitle', onSubtitle);
     event.videoElement.addEventListener('record', onRecord);

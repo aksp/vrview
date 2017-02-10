@@ -16,23 +16,143 @@ playerSts = {
     subtitles: true,
     playback: null,
   },
+  timeline: null,
+  boundaries: null,
+  $spec_composer: $('#spec-composer'),
 };
+
+function onSliderChange() {
+  var value = playerSts.timeline.slider("value");
+  vrView.seek(value/1000.0);
+}
+
+function updateTimeline() {
+  playerSts.timeline.slider("value", playerSts.currentTime * 1000.0);
+}
+
+function addOrientationChange(time) {
+  var sc = playerSts.$spec_composer;
+  if (sc.is(":visible")) {
+     var new_text = sc.val() + "\n" + time;
+     sc.val(new_text);
+  } else {
+    sc.show();
+    sc.val(time);
+  }
+}
+
+function outputNewSpec() {
+
+  var sc_text = playerSts.$spec_composer.val();
+  var sc_text_arr = sc_text.split("\n");
+  var out = {"subtitles": [], "orientation": [], "videos": []};
+  var titles_times = [];
+
+  for (var i = 0; i < sc_text_arr.length; i++) {
+    var els = sc_text_arr[i].split(" ");
+    if (els.length > 0) {
+      var start = els[0];
+      var text = els.splice(1,els.length);
+      titles_times.push([start,text]);
+    }
+  };
+
+  function addToOut(tt1, tt2) {
+
+    var start = parseFloat(tt1[0]);
+    var end = parseFloat(tt2[0]);
+    var text;
+
+    if (tt1.length > 1) {
+      text = tt1[1].join(" ");
+      out.subtitles.push({
+        start: start,
+        end: end,
+        text: text
+      });
+    } 
+
+    out.orientation.push({
+      start: start,
+      end: end,
+      orientations: [], // TODO: create output for orientations
+    });
+
+  }
+
+  for (var i = 0; i < titles_times.length - 1; i++) {
+
+    addToOut(titles_times[i], titles_times[i+1]);
+
+  };
+
+  out.videos.push({
+      fn: playerSts.specs.video_fn,
+      stereo: playerSts.specs.stereo,
+  });
+
+  addToOut(titles_times[titles_times.length - 1], [playerSts.specs.duration]);
+
+  console.log(out);
+
+}
+
+function setTimelineKeycodes() {
+  $(document).on("keypress", function(e){
+    var k = e.keyCode;
+    // if you've pressed space
+    if (k === 32 && e.target == document.body) {
+
+      e.preventDefault();
+      onTogglePlay();
+
+    // if you've pressed o or s
+    } else if ( k === 111 && $(e.target).attr("id") !== "spec-composer") {
+        addOrientationChange(playerSts.currentTime);
+
+    // you've pressed s
+    } else if (k === 115 && $(e.target).attr("id") !== "spec-composer") {
+       outputNewSpec();
+    }
+
+  });
+}
+
+function setupTimeline(video_fn) {
+
+  $('#fake-video-player').hide();
+  $('#fake-video-player').html('<video src=' + video_fn + ' preload="metadata"></video>');
+  $('#fake-video-player').find("video").eq(0).on("durationchange", function(){
+    var seconds = $(this)[0].duration;
+    playerSts.specs.duration = seconds; 
+
+    console.log("Video duration: " + seconds);
+
+    // setup slider with this duration
+    var ms = seconds * 1000;
+    $('#slider').slider({
+      max: ms,
+      slide: onSliderChange
+    });
+
+    playerSts.timeline = $('#slider');
+    $('#fake-video-player').remove();
+
+    setTimelineKeycodes();
+  });
+}
 
 function getIframedocument(){
     return $('iframe').eq(0)[0].contentWindow.document;
 }
 
-function createPlayer(video_fn) {
+function createPlayer(video_fn, stereo) {
   // Load VR View.
   vrView = new VRView.Player('#vrview', {
     width: '100%',
     height: 480,
     video: video_fn,
-    is_stereo: false,
-    //is_debug: true,
-    //default_heading: 90,
-    //is_yaw_only: true,
-    //is_vr_off: true,
+    is_stereo: stereo ? true : false,
   });
   vrView.on('ready', onVRViewReady);
 
@@ -63,7 +183,12 @@ function onLoad() {
       // todo: create player that cuts between multiple videos
       if (playerSts.specs.playback.videos.length === 1) {
         var video_fn = playerSts.specs.playback.videos[0].fn;
-        createPlayer(video_fn);
+        var stereo = playerSts.specs.playback.videos[0].stereo;
+
+        playerSts.specs.video_fn = video_fn;
+        playerSts.specs.stereo = stereo;
+
+        createPlayer(video_fn, stereo);
       }
     });
   }
@@ -162,6 +287,11 @@ function listenForCurrentTime() {
     if (playerSts.specs.subtitles) {
       updateSubtitle();
     }
+
+    if (playerSts.timeline) {
+      updateTimeline();
+      $('#currentTime').text(playerSts.currentTime);
+    }
     
   });
 
@@ -213,6 +343,7 @@ function onVRViewReady() {
     playButton.classList.remove('paused');
   }
   listenForCurrentTime();
+  setupTimeline(playerSts.specs.video_fn);
 
   $(getIframedocument()).on('touchstart', function(e){
       if (isTouchCardboardButton(e)) {

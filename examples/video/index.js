@@ -21,8 +21,8 @@ function onLoad() {
   vrView = new VRView.Player('#vrview', {
     width: '100%',
     height: 480,
-    video: 'congo_2048.mp4',
-    is_stereo: true,
+    video: 'nocuts.MP4',
+    is_stereo: false,
     //is_debug: true,
     //default_heading: 90,
     //is_yaw_only: true,

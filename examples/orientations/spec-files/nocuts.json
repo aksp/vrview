@@ -43,32 +43,33 @@
         {
             "start": 14.344827586206897, 
             "end": 24.862068965517242, 
-            "text": ""
+            "text": "That's what I thought..."
         }, 
         {
             "start": 24.862068965517242, 
             "end": 26.0, 
-            "text": ""
+            "text": "Not that Mulwray"
         }, 
         {
             "start": 26.0, 
             "end": 38.89655172413793, 
-            "text": ""
+            "text": "Yes that Mulwray..."
         }, 
         {
             "start": 38.89655172413793, 
             "end": 45.41379310344828, 
-            "text": ""
+            "text": "..."
         }, 
         {
             "start": 45.41379310344828, 
             "end": 900000, 
-            "text": ""
+            "text": "..."
         }
     ], 
     "videos": [
         {
-            "fn": "../video/nocuts.MP4"
+            "fn": "videos/nocuts.MP4",
+            "stereo": false
         }
     ], 
     "orientation": [
