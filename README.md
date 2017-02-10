@@ -8,7 +8,7 @@ Ones implemented by google (see here: <http://developers.google.com/cardboard/vr
 Ones I've implemented that work on both desktop and cardboard/mobile: 
 * vrview.setOrientation(_y-axis-rotation-in-radians_) -- Sets current camera orientation by rotating camera around y axis 
 * vrview.getOrientation() -- Gets the current camera orientation about the y axis (offset by -pi/2). This doesn't actually get the orientation but instead calls an event that you can listen for
-* vrview.subtitle(_subtitle-text_) -- If the subtitle isn't currently on the screen, it puts the new text on the screen, if it is on the screen, it removes it 
+* vrview.subtitle(_subtitle-text_) -- If the subtitle isn't currently on the screen, it puts the new text on the screen, if it is on the screen, it removes it. Doesn't handle multiple lines and the positioning is a little weird on cardboard
 * vrview.currentTime() -- Gets the current time in the video. Again, this doesn't actually return the time, it just calls an event that you can listen for
 
 Ones I've implemented that work on desktop (may work on cardboard) and are only partially finished:
