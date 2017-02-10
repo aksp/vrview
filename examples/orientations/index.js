@@ -88,18 +88,17 @@ function outputNewSpec() {
 
   out.videos.push({
       fn: playerSts.specs.video_fn,
-      stereo: playerSts.specs.stereo,
+      stereo: playerSts.specs.stereo
   });
 
   addToOut(titles_times[titles_times.length - 1], [playerSts.specs.duration]);
-
-  console.log(out);
 
 }
 
 function setTimelineKeycodes() {
   $(document).on("keypress", function(e){
     var k = e.keyCode;
+
     // if you've pressed space
     if (k === 32 && e.target == document.body) {
 
@@ -175,8 +174,8 @@ function onLoad() {
   var q = url.split("?f=");
   playerSts.specs.fn = q[q.length-1];
 
-  // load playback instructions
-  if (playerSts.specs) {
+  // load playback instructions if there is a spec json
+  if ( playerSts.specs.fn && playerSts.specs.fn.toLowerCase().indexOf(".json") > -1) {
     $.getJSON(playerSts.specs.fn, function( data ) {
       playerSts.specs.playback = data;
 
@@ -191,7 +190,24 @@ function onLoad() {
         createPlayer(video_fn, stereo);
       }
     });
+  } else if (playerSts.specs.fn 
+          && playerSts.specs.fn.toLowerCase().indexOf(".mp4") > -1 ) {
+
+    // otherwise we're just going to load the video
+    if (playerSts.specs.fn.indexOf("?stereo=") > -1) {
+
+      playerSts.specs.video_fn = playerSts.specs.fn.split("?stereo=")[0];
+      playerSts.specs.stereo = ( playerSts.specs.fn.split("?stereo=")[1] == 'true' );
+
+    } else {
+
+      playerSts.specs.video_fn = playerSts.specs.fn;
+      playerSts.specs.stereo = false;
+    }
+
+    createPlayer(playerSts.specs.video_fn, playerSts.specs.stereo);
   }
+
 }
 
 function getPossibleOrientations(){
@@ -284,7 +300,7 @@ function listenForCurrentTime() {
       updateOrientation();
     }
 
-    if (playerSts.specs.subtitles) {
+    if (playerSts.specs.subtitles && playerSts.specs.playback) {
       updateSubtitle();
     }
 
