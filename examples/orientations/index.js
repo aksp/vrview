@@ -198,12 +198,14 @@ function addButtons() {
   playButton = document.querySelector('#toggleplay');
   muteButton = document.querySelector('#togglemute');
   orientationButton = document.querySelector('#toggleorientation');
+  orientationPauseButton = document.querySelector('#toggleorientationpause');
   forcedcutsButton = document.querySelector('#toggleforcedcuts');
   subtitlesButton = document.querySelector('#togglesubtitles');
 
   playButton.addEventListener('click', onTogglePlay);
   muteButton.addEventListener('click', onToggleMute);
   orientationButton.addEventListener('click', onToggleOrientation);
+  orientationPauseButton.addEventListener('click', onToggleOrientationPause);
   forcedcutsButton.addEventListener('click', onToggleForcedCuts);
   subtitlesButton.addEventListener('click', onToggleSubtitles);
 }
@@ -358,6 +360,12 @@ function listenForCurrentTime() {
     // also, update the orientation accordingly
     if (playerSts.specs.mode === "optional_cuts") {
       updateOrientationOptions();
+
+      if (playerSts.specs.orientationpause) {
+        playOrPauseBasedOnOrientation();
+      }
+      
+
     } else if (playerSts.specs.mode === "forced_cuts") {
       updateOrientation();
     }
@@ -408,10 +416,6 @@ function isTouchCardboardButton(e) {
   }
 }
 
-function playOnlyWhenMainOrientations() {
-
-}
-
 function onCardboardButtonPress() {
   // for now we're just going to change the orientation
   onToggleOrientation();
@@ -441,11 +445,57 @@ function onVRViewReady() {
   });
 }
 
+function playOrPauseBasedOnOrientation() {
+
+  // get the possible orientations
+  var orientations = playerSts.specs.possible_orientations;
+  var current_orientation = playerSts.currentTheta;
+  var possible_offset = Math.PI/2; // TODO make customizable
+
+  if (!orientations) {
+    orientations = [0];
+  }
+
+  var within_one_boundary = false;
+
+  for (var i = 0; i < orientations.length; i++) {
+      var orient = orientations[i];
+
+      var lower_bound = orient - possible_offset;
+      var upper_bound = orient + possible_offset;
+
+      // if within boundaries play that thing
+      if (lower_bound < current_orientation
+          && current_orientation < upper_bound) {
+
+        within_one_boundary = true;
+
+        
+        
+
+      } 
+    };
+
+    if (within_one_boundary
+        && playerSts.pausedFromOrientation 
+          && vrView.isPaused) {
+
+      // if the video is not playing, play the video
+      onTogglePlay();
+      playerSts.pausedFromOrientation = false;
+
+    } else if (!within_one_boundary && !vrView.isPaused) {
+      onTogglePlay();
+      // if the video is not paused, pause the video
+      playerSts.pausedFromOrientation = true; // TODO: hacky fix
+    }
+
+}
+
 function onToggleOrientation() {
   var orientations = playerSts.specs.possible_orientations;
   var i = playerSts.specs.next_orientation_i;
-  console.log(orientations);
-  console.log(i);
+
   if (orientations.length > 0 && i !== undefined) {
     // set orientation to the next orientation
     vrView.setOrientation(orientations[i]); 
@@ -495,6 +545,20 @@ function onToggleForcedCuts() {
     playerSts.specs.mode = "forced_cuts";
     $(forcedcutsButton).text("Switch to optional cuts");
     $(orientationButton).addClass("disabled");
+  }
+}
+
+function onToggleOrientationPause() {
+
+  if (playerSts.specs.orientationpause === true) {
+    playerSts.specs.orientationpause = false;
+    console.log("orientation pause is false");
+    $(forcedcutsButton).text("Turn on orientation pause");
+
+  } else {
+    playerSts.specs.orientationpause = true;
+    console.log("orientation pause is true");
+    $(forcedcutsButton).text("Turn off orientation pause");
   }
 }
 
