@@ -10183,6 +10183,7 @@ IFrameMessageReceiver.prototype.onMessage_ = function(event) {
     case Message.SUBTITLE:
     case Message.RECORD:
     case Message.CURRENTTIME:
+    case Message.GET_ORIENTATION:
     case Message.PAUSE:
       // TODO(smus): Emit the event 
       this.emit(type, data);
@@ -10655,6 +10656,7 @@ receiver.on(Message.ADD_HOTSPOT, onAddHotspot);
 receiver.on(Message.SET_CONTENT, onSetContent);
 receiver.on(Message.SET_VOLUME, onSetVolume);
 receiver.on(Message.SET_ORIENTATION, onSetOrientation);
+receiver.on(Message.GET_ORIENTATION, onGetOrientation);
 
 window.addEventListener('load', onLoad);
 
@@ -10935,6 +10937,18 @@ function onSetVolume(e) {
   worldRenderer.videoProxy.setVolume(e.volumeLevel);
 }
 
+// Amy - SO HACKY IM SORRY
+function onGetOrientation() {
+
+  // from - http://stackoverflow.com/a/34329880
+  var vector = worldRenderer.camera.getWorldDirection();
+  var theta = Math.atan2(vector.x,vector.z);
+
+  var current_theta_event = new CustomEvent('getorientationanswer', {"detail": theta});
+  document.dispatchEvent(current_theta_event);
+}
+
+// Amy - TODO: shouldn't be setting the orientation to undefined or null
 function onSetOrientation(orientation) {
 
   if (!worldRenderer.videoProxy) {
@@ -11492,11 +11506,6 @@ VideoProxy.prototype.seek = function(seconds) {
 }
 
 // Amy - to do, add IOS stuff
-VideoProxy.prototype.setOrientation = function(orientation) {
-  this.videoElement.orientation = orientation;
-}
-
-// Amy - to do, add IOS stuff
 VideoProxy.prototype.emphasize = function(rotation) {
   this.videoElement.emphasize = rotation;
 }
@@ -11932,6 +11941,7 @@ var Message = {
   PAUSE: 'pause',
   SEEK: 'seek',
   CURRENTTIME: 'currenttime',
+  GET_ORIENTATION: 'getorientation',
   // ROTATE: 'rotate',
   EMPHASIZE: 'emphasize',
   SUBTITLE: 'subtitle',

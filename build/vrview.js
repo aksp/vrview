@@ -492,6 +492,10 @@ Player.prototype.setOrientation = function(orientation) {
   this.sender.send({type: Message.SET_ORIENTATION, data: orientation});
 };
 
+Player.prototype.getOrientation = function() {
+  this.sender.send({ type: Message.GET_ORIENTATION });
+};
+
 // Amy - add a way to emphasize certain orientations
 Player.prototype.emphasize = function(rotation) {
   this.sender.send({type: Message.EMPHASIZE, data: rotation});
@@ -684,6 +688,7 @@ var Message = {
   PLAY: 'play',
   PAUSE: 'pause',
   CURRENTTIME: 'currenttime',
+  GET_ORIENTATION: 'getorientation',
   ADD_HOTSPOT: 'addhotspot',
   SET_CONTENT: 'setimage',
   SET_VOLUME: 'setvolume',

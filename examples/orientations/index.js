@@ -289,6 +289,7 @@ function updateSubtitle() {
 function listenForCurrentTime() {
   // we need to listen for events
   iframe = getIframedocument();
+
   iframe.addEventListener("currenttimeanswer" , function(e){
     // update that current time!
     playerSts.currentTime = e.detail;
@@ -311,9 +312,15 @@ function listenForCurrentTime() {
     
   });
 
+  // this could be useful
+  iframe.addEventListener("getorientationanswer" , function(e) {
+    playerSts.currentTheta = e.detail +  1.570796326794897; // TODO fix this hacky fix to offset problem
+  });
+
   // but also we need to ask for it all of the time :(
   setInterval(function() {
     vrView.currentTime();
+    vrView.getOrientation(); 
   }, 1000/29);
 }
 
@@ -359,6 +366,7 @@ function onVRViewReady() {
     playButton.classList.remove('paused');
   }
   listenForCurrentTime();
+
   setupTimeline(playerSts.specs.video_fn);
 
   $(getIframedocument()).on('touchstart', function(e){
