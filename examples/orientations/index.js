@@ -30,14 +30,22 @@ function updateTimeline() {
   playerSts.timeline.slider("value", playerSts.currentTime * 1000.0);
 }
 
-function addOrientationChange(time) {
+function additionalOrientation(orientation) {
   var sc = playerSts.$spec_composer;
   if (sc.is(":visible")) {
-     var new_text = sc.val() + "\n" + time;
+    var new_text = sc.val() + " " + orientation;
+    sc.val(new_text);
+  }
+}
+
+function addOrientationChange(time, orientation) {
+  var sc = playerSts.$spec_composer;
+  if (sc.is(":visible")) {
+     var new_text = sc.val() + "\n" + time + " " + orientation;
      sc.val(new_text);
   } else {
     sc.show();
-    sc.val(time);
+    sc.val(time + " " + orientation);
   }
 }
 
@@ -50,33 +58,57 @@ function outputNewSpec() {
 
   for (var i = 0; i < sc_text_arr.length; i++) {
     var els = sc_text_arr[i].split(" ");
+    var start,o1,o2,text;
+
     if (els.length > 0) {
-      var start = els[0];
-      var text = els.splice(1,els.length);
-      titles_times.push([start,text]);
+      start = els[0];
     }
+    if (els.length > 1) {
+      o1 = els[1];
+    } 
+    if (els.length > 2) {
+      if (isNaN(els[2])) { // if its not a number, we should assume its all text
+        text = els.splice(2,els.length).join(" ");
+      } else {
+        o2 = els[2]
+        text = els.splice(3,els.length).join(" ");
+      }
+    }
+    titles_times.push({
+      "start": start,
+      "o1": o1,
+      "o2": o2,
+      "text": text
+    });
   };
 
   function addToOut(tt1, tt2) {
 
-    var start = parseFloat(tt1[0]);
-    var end = parseFloat(tt2[0]);
+    var start = parseFloat(tt1.start);
+    var end = parseFloat(tt2.start);
     var text;
 
-    if (tt1.length > 1) {
-      text = tt1[1].join(" ");
+    if (tt1.text !== undefined && tt1.text !== "") {
       out.subtitles.push({
         start: start,
         end: end,
-        text: text
+        text: tt1.text
       });
-    } 
+    }
 
-    out.orientation.push({
+    var out_orientation = {
       start: start,
       end: end,
-      orientations: [], // TODO: create output for orientations
-    });
+      orientations: [],
+    }
+    if (o1 !== undefined) {
+      out_orientation.orientations.push(parseFloat(o1));
+    } 
+    if (o2 !== undefined) {
+      out_orientation.orientations.push(parseFloat(o2));
+    }
+
+    out.orientation.push(out_orientation);
 
   }
 
@@ -92,6 +124,7 @@ function outputNewSpec() {
   });
 
   addToOut(titles_times[titles_times.length - 1], [playerSts.specs.duration]);
+  console.log(out);
 
 }
 
@@ -105,9 +138,13 @@ function setTimelineKeycodes() {
       e.preventDefault();
       onTogglePlay();
 
-    // if you've pressed o or s
+    // if you've pressed o, add the time and current orientation to a new line
     } else if ( k === 111 && $(e.target).attr("id") !== "spec-composer") {
-        addOrientationChange(playerSts.currentTime);
+        addOrientationChange(playerSts.currentTime, playerSts.currentTheta);
+
+    // if you've pressed an m, append an orientation to the last line
+    } else if (k === 109){
+        additionalOrientation(playerSts.currentTheta);
 
     // you've pressed s
     } else if (k === 115 && $(e.target).attr("id") !== "spec-composer") {
@@ -145,16 +182,7 @@ function getIframedocument(){
     return $('iframe').eq(0)[0].contentWindow.document;
 }
 
-function createPlayer(video_fn, stereo) {
-  // Load VR View.
-  vrView = new VRView.Player('#vrview', {
-    width: '100%',
-    height: 480,
-    video: video_fn,
-    is_stereo: stereo ? true : false,
-  });
-  vrView.on('ready', onVRViewReady);
-
+function addButtons() {
   // define buttons and add event listeners
   playButton = document.querySelector('#toggleplay');
   muteButton = document.querySelector('#togglemute');
@@ -167,6 +195,17 @@ function createPlayer(video_fn, stereo) {
   orientationButton.addEventListener('click', onToggleOrientation);
   forcedcutsButton.addEventListener('click', onToggleForcedCuts);
   subtitlesButton.addEventListener('click', onToggleSubtitles);
+}
+
+function createPlayer(video_fn, stereo) {
+  // Load VR View.
+  vrView = new VRView.Player('#vrview', {
+    width: '100%',
+    height: 480,
+    video: video_fn,
+    is_stereo: stereo ? true : false,
+  });
+  vrView.on('ready', onVRViewReady);
 }
 
 function onLoad() {
@@ -187,7 +226,11 @@ function onLoad() {
         playerSts.specs.video_fn = video_fn;
         playerSts.specs.stereo = stereo;
 
+        addButtons();
         createPlayer(video_fn, stereo);
+
+        // we can get rid of currentTime because that ugly
+        $('#currentTime').hide();
       }
     });
   } else if (playerSts.specs.fn 
@@ -205,7 +248,14 @@ function onLoad() {
       playerSts.specs.stereo = false;
     }
 
+    addButtons();
     createPlayer(playerSts.specs.video_fn, playerSts.specs.stereo);
+
+    // we don't need some of the buttons
+    $(orientationButton).hide();
+    $(forcedcutsButton).hide();
+    $(subtitlesButton).hide();
+
   }
 
 }
@@ -345,6 +395,10 @@ function isTouchCardboardButton(e) {
   } else {
     return false;
   }
+}
+
+function playOnlyWhenMainOrientations() {
+
 }
 
 function onCardboardButtonPress() {
