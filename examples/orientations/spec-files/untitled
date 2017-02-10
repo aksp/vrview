@@ -1,5 +1,0 @@
-{
-	"orientation": [{"start": 0, "end": 10, "orientations": [0,3.14]}],
-	"subtitles" : [{"start": 0, "end": 5, "text": "first five seconds"}, {"start": 6, "end": 10, "text": "less than 10 seconds"}],
-	"videos": [{"fn": "../orientations/steve-walking.mp4"}]
-}

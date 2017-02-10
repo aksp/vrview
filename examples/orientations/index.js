@@ -57,35 +57,45 @@ function outputNewSpec() {
   var titles_times = [];
 
   for (var i = 0; i < sc_text_arr.length; i++) {
+
     var els = sc_text_arr[i].split(" ");
-    var start,o1,o2,text;
+
+    var start = undefined; 
+    var o1 = undefined;
+    var o2 = undefined;
+    var text = undefined;
 
     if (els.length > 0) {
-      start = els[0];
+      start = parseFloat(els[0]);
     }
     if (els.length > 1) {
-      o1 = els[1];
+      o1 = parseFloat(els[1]);
     } 
+
     if (els.length > 2) {
       if (isNaN(els[2])) { // if its not a number, we should assume its all text
         text = els.splice(2,els.length).join(" ");
       } else {
-        o2 = els[2]
+        o2 = parseFloat(els[2]);
         text = els.splice(3,els.length).join(" ");
       }
     }
-    titles_times.push({
+
+    var res = {
       "start": start,
       "o1": o1,
       "o2": o2,
       "text": text
-    });
+    };
+    console.log(res);
+    titles_times.push(res);
+
   };
 
-  function addToOut(tt1, tt2) {
+  function addToOut(tt1, tt2, out) {
 
-    var start = parseFloat(tt1.start);
-    var end = parseFloat(tt2.start);
+    var start = tt1.start;
+    var end = tt2.start;
     var text;
 
     if (tt1.text !== undefined && tt1.text !== "") {
@@ -101,20 +111,21 @@ function outputNewSpec() {
       end: end,
       orientations: [],
     }
-    if (o1 !== undefined) {
-      out_orientation.orientations.push(parseFloat(o1));
+    if (tt1.o1 !== undefined) {
+      out_orientation.orientations.push(tt1.o1);
     } 
-    if (o2 !== undefined) {
-      out_orientation.orientations.push(parseFloat(o2));
+    if (tt1.o2 !== undefined) {
+      out_orientation.orientations.push(tt1.o2);
     }
 
     out.orientation.push(out_orientation);
+    return out;
 
   }
 
   for (var i = 0; i < titles_times.length - 1; i++) {
 
-    addToOut(titles_times[i], titles_times[i+1]);
+    out = addToOut(titles_times[i], titles_times[i+1], out);
 
   };
 
@@ -123,8 +134,8 @@ function outputNewSpec() {
       stereo: playerSts.specs.stereo
   });
 
-  addToOut(titles_times[titles_times.length - 1], [playerSts.specs.duration]);
-  console.log(out);
+  out = addToOut(titles_times[titles_times.length - 1], [playerSts.specs.duration], out);
+  console.log(JSON.stringify(out));
 
 }
 
