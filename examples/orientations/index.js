@@ -1,11 +1,15 @@
 // Based on the example in ../video/ and edited heavily
 
 var vrView;
+
 var playButton;
 var muteButton;
 var orientationButton;
 var forcedcutsButton;
 var subtitlesButton;
+
+var timelineSlider;
+var durationVideoPlayer;
 
 // player settings
 playerSts = {
@@ -20,6 +24,13 @@ playerSts = {
   boundaries: null,
   $spec_composer: $('#spec-composer'),
 };
+
+function isMobile() {
+  if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+    return true;
+  } 
+  return false;
+}
 
 function onSliderChange() {
   var value = playerSts.timeline.slider("value");
@@ -167,23 +178,28 @@ function setTimelineKeycodes() {
 
 function setupTimeline(video_fn) {
 
-  $('#fake-video-player').hide();
-  $('#fake-video-player').html('<video src=' + video_fn + ' preload="metadata"></video>');
-  $('#fake-video-player').find("video").eq(0).on("durationchange", function(){
+  // next 5 lines to find duration
+  $(durationVideoPlayer).hide();
+  $(durationVideoPlayer).html('<video src=' + video_fn + ' preload="metadata"></video>');
+  $(durationVideoPlayer).find("video").eq(0).on("durationchange", function(){
     var seconds = $(this)[0].duration;
     playerSts.specs.duration = seconds; 
-
     console.log("Video duration: " + seconds);
 
-    // setup slider with this duration
+    // now setup the timeline with this duration
     var ms = seconds * 1000;
-    $('#slider').slider({
+    $(timelineSlider).slider({
       max: ms,
       slide: onSliderChange
     });
 
-    playerSts.timeline = $('#slider');
-    $('#fake-video-player').remove();
+    // if the cell phone is mobile, we're going to have to change the 
+    if (isMobile()) {
+      $(timelineSlider).css({"width": "80%", "margin-left": "10%"});
+    }
+
+    playerSts.timeline = $(timelineSlider);
+    $(durationVideoPlayer).remove();
 
     setTimelineKeycodes();
   });
@@ -201,6 +217,8 @@ function addButtons() {
   orientationPauseButton = document.querySelector('#toggleorientationpause');
   forcedcutsButton = document.querySelector('#toggleforcedcuts');
   subtitlesButton = document.querySelector('#togglesubtitles');
+  timelineSlider = document.querySelector('#slider');
+  durationVideoPlayer = document.querySelector('#fake-video-player');
 
   playButton.addEventListener('click', onTogglePlay);
   muteButton.addEventListener('click', onToggleMute);
@@ -208,6 +226,7 @@ function addButtons() {
   orientationPauseButton.addEventListener('click', onToggleOrientationPause);
   forcedcutsButton.addEventListener('click', onToggleForcedCuts);
   subtitlesButton.addEventListener('click', onToggleSubtitles);
+
 }
 
 function createPlayer(video_fn, stereo) {
@@ -268,6 +287,7 @@ function onLoad() {
     $(orientationButton).hide();
     $(forcedcutsButton).hide();
     $(subtitlesButton).hide();
+    $(orientationPauseButton).hide();
 
   }
 
@@ -469,26 +489,22 @@ function playOrPauseBasedOnOrientation() {
           && current_orientation < upper_bound) {
 
         within_one_boundary = true;
-
-        
-        
-
       } 
-    };
+  };
 
-    if (within_one_boundary
-        && playerSts.pausedFromOrientation 
-          && vrView.isPaused) {
+  if (within_one_boundary
+      && playerSts.pausedFromOrientation 
+        && vrView.isPaused) {
 
-      // if the video is not playing, play the video
-      onTogglePlay();
-      playerSts.pausedFromOrientation = false;
+    // if the video is not playing, play the video
+    onTogglePlay();
+    playerSts.pausedFromOrientation = false;
 
-    } else if (!within_one_boundary && !vrView.isPaused) {
-      onTogglePlay();
-      // if the video is not paused, pause the video
-      playerSts.pausedFromOrientation = true; // TODO: hacky fix
-    }
+  } else if (!within_one_boundary && !vrView.isPaused) {
+    onTogglePlay();
+    // if the video is not paused, pause the video
+    playerSts.pausedFromOrientation = true; // TODO: hacky fix
+  }
 
 }
 
@@ -553,12 +569,12 @@ function onToggleOrientationPause() {
   if (playerSts.specs.orientationpause === true) {
     playerSts.specs.orientationpause = false;
     console.log("orientation pause is false");
-    $(forcedcutsButton).text("Turn on orientation pause");
+    $(orientationPauseButton).text("Turn on orientation pause");
 
   } else {
     playerSts.specs.orientationpause = true;
     console.log("orientation pause is true");
-    $(forcedcutsButton).text("Turn off orientation pause");
+    $(orientationPauseButton).text("Turn off orientation pause");
   }
 }
 
