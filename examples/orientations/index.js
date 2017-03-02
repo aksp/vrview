@@ -7,13 +7,38 @@ var muteButton;
 var orientationButton;
 var forcedcutsButton;
 var subtitlesButton;
+var historyshotchangeButton;
+var pauseshotchangeButton;
 
 var timelineSlider;
 var durationVideoPlayer;
 
+var PI_DENOMINATOR = 4;
+var FOV_RADIANS = 0.20;
+var circle_high = Math.PI + Math.PI/2;
+var circle_low = - Math.PI/2;
+
+// first time play?
+var firstTimePlay = true;
+VIDEO_START_TIME = null;
+
 // player settings
-playerSts = {
+sts = {
+  setOrientationOffset: 1.570796326794897,
   currentTime: 0,
+  cuts: {
+    required_time: 3,
+    current_shot: {"name": null, "start": null, "end": null},
+    pause_shot_change: false,
+    history_shot_change: false,
+  },
+  theta: {
+    current: null,
+    last: null,
+    time_set: null,
+    shot_history: [],
+    rec_change: 0.01
+  },
   specs: { // specifications for playback
     fn: null,
     mode: "optional_cuts",
@@ -23,7 +48,69 @@ playerSts = {
   timeline: null,
   boundaries: null,
   $spec_composer: $('#spec-composer'),
+  dirty: {
+    currentTheta: false,
+    currentTime: false,
+    possible_orientations: false,
+  },
 };
+
+// http://stackoverflow.com/a/8273091 by Tadeck
+function range(start, stop, step) {
+    if (typeof stop == 'undefined') {
+        // one param defined
+        stop = start;
+        start = 0;
+    }
+
+    if (typeof step == 'undefined') {
+        step = 1;
+    }
+
+    if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
+        return [];
+    }
+
+    var result = [];
+    for (var i = start; step > 0 ? i < stop : i > stop; i += step) {
+        result.push(i);
+    }
+
+    return result;
+};
+
+function pausedLookingAround(){
+  var d = new Date(); var t = d.getTime();
+  var time_diff = t - sts.theta.time_set;
+  if ((time_diff)/1000.0 > sts.cuts.required_time) {
+     return true; 
+  }
+  return false;
+};
+
+function lookedInAllDirections(){
+  var req = range(circle_low, circle_high, FOV_RADIANS);
+
+  // http://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
+  var zeros = Array.apply(null, Array(req.length)).map(Number.prototype.valueOf,0);
+
+  for (var i = 0; i < sts.theta.shot_history.length; i++) {
+    var hist = sts.theta.shot_history[i];
+    var low = req.filter(function(d){return d < hist});
+    if (low.length > 0) {
+      var index = req.indexOf(low[low.length - 1]);
+      zeros[index] = 1;
+    }
+  };
+
+  // if we've visited (almost)? every section
+  console.log(zeros.filter(function(x){return x==1}).length +"/" +zeros.length);
+  if (zeros.filter(function(x){return x==1}).length >= zeros.length - 3) {
+    return true;
+  }
+  return false;
+};
+
 
 function isMobile() {
   if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
@@ -33,16 +120,16 @@ function isMobile() {
 }
 
 function onSliderChange() {
-  var value = playerSts.timeline.slider("value");
+  var value = sts.timeline.slider("value");
   vrView.seek(value/1000.0);
 }
 
 function updateTimeline() {
-  playerSts.timeline.slider("value", playerSts.currentTime * 1000.0);
+  sts.timeline.slider("value", sts.currentTime * 1000.0);
 }
 
 function additionalOrientation(orientation) {
-  var sc = playerSts.$spec_composer;
+  var sc = sts.$spec_composer;
   if (sc.is(":visible")) {
     var new_text = sc.val() + " " + orientation;
     sc.val(new_text);
@@ -50,7 +137,7 @@ function additionalOrientation(orientation) {
 }
 
 function addOrientationChange(time, orientation) {
-  var sc = playerSts.$spec_composer;
+  var sc = sts.$spec_composer;
   if (sc.is(":visible")) {
      var new_text = sc.val() + "\n" + time + " " + orientation;
      sc.val(new_text);
@@ -62,7 +149,7 @@ function addOrientationChange(time, orientation) {
 
 function outputNewSpec() {
 
-  var sc_text = playerSts.$spec_composer.val();
+  var sc_text = sts.$spec_composer.val();
   var sc_text_arr = sc_text.split("\n");
   var out = {"subtitles": [], "orientation": [], "videos": []};
   var titles_times = [];
@@ -141,13 +228,12 @@ function outputNewSpec() {
   };
 
   out.videos.push({
-      fn: playerSts.specs.video_fn,
-      stereo: playerSts.specs.stereo
+      fn: sts.specs.video_fn,
+      stereo: sts.specs.stereo
   });
 
-  out = addToOut(titles_times[titles_times.length - 1], [playerSts.specs.duration], out);
+  out = addToOut(titles_times[titles_times.length - 1], [sts.specs.duration], out);
   console.log(JSON.stringify(out));
-
 }
 
 function setTimelineKeycodes() {
@@ -162,11 +248,11 @@ function setTimelineKeycodes() {
 
     // if you've pressed o, add the time and current orientation to a new line
     } else if ( k === 111 && $(e.target).attr("id") !== "spec-composer") {
-        addOrientationChange(playerSts.currentTime, playerSts.currentTheta);
+        addOrientationChange(sts.currentTime, sts.theta.current);
 
     // if you've pressed an m, append an orientation to the last line
     } else if (k === 109){
-        additionalOrientation(playerSts.currentTheta);
+        additionalOrientation(sts.theta.current);
 
     // you've pressed s
     } else if (k === 115 && $(e.target).attr("id") !== "spec-composer") {
@@ -177,13 +263,12 @@ function setTimelineKeycodes() {
 }
 
 function setupTimeline(video_fn) {
-
   // next 5 lines to find duration
   $(durationVideoPlayer).hide();
   $(durationVideoPlayer).html('<video src=' + video_fn + ' preload="metadata"></video>');
   $(durationVideoPlayer).find("video").eq(0).on("durationchange", function(){
     var seconds = $(this)[0].duration;
-    playerSts.specs.duration = seconds; 
+    sts.specs.duration = seconds; 
     console.log("Video duration: " + seconds);
 
     // now setup the timeline with this duration
@@ -198,7 +283,7 @@ function setupTimeline(video_fn) {
       $(timelineSlider).css({"width": "80%", "margin-left": "10%"});
     }
 
-    playerSts.timeline = $(timelineSlider);
+    sts.timeline = $(timelineSlider);
     $(durationVideoPlayer).remove();
 
     setTimelineKeycodes();
@@ -215,8 +300,13 @@ function addButtons() {
   muteButton = document.querySelector('#togglemute');
   orientationButton = document.querySelector('#toggleorientation');
   orientationPauseButton = document.querySelector('#toggleorientationpause');
+  orientationVideoChangeButton = document.querySelector('#toggleorientationvideochange');
   forcedcutsButton = document.querySelector('#toggleforcedcuts');
   subtitlesButton = document.querySelector('#togglesubtitles');
+
+  pauseshotchangeButton = document.querySelector('#togglepauseshotchange');
+  historyshotchangeButton = document.querySelector('#togglehistoryshotchange');
+
   timelineSlider = document.querySelector('#slider');
   durationVideoPlayer = document.querySelector('#fake-video-player');
 
@@ -224,12 +314,19 @@ function addButtons() {
   muteButton.addEventListener('click', onToggleMute);
   orientationButton.addEventListener('click', onToggleOrientation);
   orientationPauseButton.addEventListener('click', onToggleOrientationPause);
+  orientationVideoChangeButton.addEventListener('click', onToggleOrientationVideoChange);
+
+  pauseshotchangeButton.addEventListener('click', onTogglePauseShotChange);
+  historyshotchangeButton.addEventListener('click', onToggleHistoryShotChange);
+
   forcedcutsButton.addEventListener('click', onToggleForcedCuts);
   subtitlesButton.addEventListener('click', onToggleSubtitles);
 
 }
 
 function createPlayer(video_fn, stereo) {
+  sts.specs.current_video_fn = video_fn; // TODO move this somewhere better (for orientation change)
+
   // Load VR View.
   vrView = new VRView.Player('#vrview', {
     width: '100%',
@@ -243,20 +340,29 @@ function createPlayer(video_fn, stereo) {
 function onLoad() {
   var url = window.location.href; 
   var q = url.split("?f=");
-  playerSts.specs.fn = q[q.length-1];
+
+  if (q[q.length-1].indexOf("backgroundVideo") < 0) {
+    sts.specs.fn = q[q.length-1];
+  } else {
+    var q2 = q[q.length-1].split("?backgroundVideo=");
+    sts.specs.fn = q2[0];
+    sts.specs.background_video_fn = q2[1];
+  }
+  console.log("Main file: " + sts.specs.fn);
+  console.log("Background video: " + sts.specs.background_video_fn);
 
   // load playback instructions if there is a spec json
-  if ( playerSts.specs.fn && playerSts.specs.fn.toLowerCase().indexOf(".json") > -1) {
-    $.getJSON(playerSts.specs.fn, function( data ) {
-      playerSts.specs.playback = data;
+  if ( sts.specs.fn && sts.specs.fn.toLowerCase().indexOf(".json") > -1) {
+    $.getJSON(sts.specs.fn, function( data ) {
+      sts.specs.playback = data;
 
       // todo: create player that cuts between multiple videos
-      if (playerSts.specs.playback.videos.length === 1) {
-        var video_fn = playerSts.specs.playback.videos[0].fn;
-        var stereo = playerSts.specs.playback.videos[0].stereo;
+      if (sts.specs.playback.videos.length >= 1) {
+        var video_fn = sts.specs.playback.videos[0].fn;
+        var stereo = sts.specs.playback.videos[0].stereo;
 
-        playerSts.specs.video_fn = video_fn;
-        playerSts.specs.stereo = stereo;
+        sts.specs.video_fn = video_fn;
+        sts.specs.stereo = stereo;
 
         addButtons();
         createPlayer(video_fn, stereo);
@@ -265,41 +371,42 @@ function onLoad() {
         $('#currentTime').hide();
       }
     });
-  } else if (playerSts.specs.fn 
-          && playerSts.specs.fn.toLowerCase().indexOf(".mp4") > -1 ) {
+  } else if (sts.specs.fn 
+          && sts.specs.fn.toLowerCase().indexOf(".mp4") > -1 ) {
 
     // otherwise we're just going to load the video
-    if (playerSts.specs.fn.indexOf("?stereo=") > -1) {
+    if (sts.specs.fn.indexOf("?stereo=") > -1) {
 
-      playerSts.specs.video_fn = playerSts.specs.fn.split("?stereo=")[0];
-      playerSts.specs.stereo = ( playerSts.specs.fn.split("?stereo=")[1] == 'true' );
+      sts.specs.video_fn = sts.specs.fn.split("?stereo=")[0];
+      sts.specs.stereo = ( sts.specs.fn.split("?stereo=")[1] == 'true' );
 
     } else {
 
-      playerSts.specs.video_fn = playerSts.specs.fn;
-      playerSts.specs.stereo = false;
+      sts.specs.video_fn = sts.specs.fn;
+      sts.specs.stereo = false;
     }
 
     addButtons();
-    createPlayer(playerSts.specs.video_fn, playerSts.specs.stereo);
+    createPlayer(sts.specs.video_fn, sts.specs.stereo);
 
     // we don't need some of the buttons
     $(orientationButton).hide();
     $(forcedcutsButton).hide();
     $(subtitlesButton).hide();
     $(orientationPauseButton).hide();
+    $(orientationVideoChangeButton).hide();
 
   }
 
 }
 
 function getPossibleOrientations(){
-  if (playerSts.specs.playback !== null) {
+  if (sts.specs.playback !== null) {
 
     // get relevant orientation objects
-    var res = $(playerSts.specs.playback.orientation).filter(function(){
-      return this.start <= playerSts.currentTime 
-          && this.end > playerSts.currentTime;
+    var res = $(sts.specs.playback.orientation).filter(function(){
+      return this.start <= sts.currentTime 
+          && this.end > sts.currentTime;
     });
 
     // for each relevant orientation object, append possible orientations
@@ -307,12 +414,7 @@ function getPossibleOrientations(){
     for (var i = 0; i < res.length; i++) {
       all_orientations = all_orientations.concat(res[i].orientations);
     };
-
-    if (all_orientations && all_orientations.length > 0) {
-      return all_orientations;
-    } else {
-      return null;
-    }
+    return all_orientations;
   }
 }
 
@@ -323,11 +425,11 @@ function updateOrientation(){
 
     // if there are any possible orientations, we're just going 
     // to take the first one and trigger a cut
-    if (res !== null && res[0] !== playerSts.current_orientation) {
+    if (res !== null && res[0] !== sts.current_orientation) {
       var first_orientation = res[0];
       vrView.setOrientation(first_orientation);
-      playerSts.current_orientation = first_orientation;
-    }
+      sts.current_orientation = first_orientation;
+    } 
 }
 
 // update the options for the video player
@@ -335,38 +437,192 @@ function updateOrientation(){
 function updateOrientationOptions(){
   var res = getPossibleOrientations();
 
+  var is_changed = (sts.specs.possible_orientations + "") !== (res + "");
+
   // we're only going to update if the possible orientations have changed
-  if (res !== null) {
-    if (!playerSts.specs.possible_orientations 
-      || playerSts.specs.possible_orientations.toString() !== res.toString()) {
-      playerSts.specs.possible_orientations = res;
-      playerSts.specs.next_orientation_i = 0;
+  if (is_changed) {
+    sts.specs.possible_orientations = res;
+    sts.specs.next_orientation_i = 0;
+    sts.specs.possible_orientations_dirty = true;
+
+    if (sts.specs.mode === "forced_cuts") {
+      updateOrientation();
     }
+  }
+}
+
+// force update current shot and if the shot is
+// different then clear out the shot history
+function updateShot() {
+  var rel_shot = sts.specs.playback.shots.filter(function(d){
+    return sts.currentTime >= d.start && sts.currentTime < d.end;
+  });
+  if (rel_shot.length > 0 && sts.cuts.current_shot.name !== rel_shot[0].name) {
+    sts.cuts.current_shot = rel_shot[0];
+    sts.theta.shot_history = [];
   }
 }
 
 function updateSubtitle() {
   // get relevant subtitles
-  var res = $(playerSts.specs.playback.subtitles).filter(function(){
-      return this.start <= playerSts.currentTime 
-          && this.end > playerSts.currentTime;
+  var res = $(sts.specs.playback.subtitles).filter(function(){
+      return this.start <= sts.currentTime 
+          && this.end > sts.currentTime;
   });
 
   if (res.length > 0 
       && res[0] 
       && res[0].text 
-      && res[0].text !== playerSts.current_subtitle) {
+      && res[0].text !== sts.current_subtitle) {
 
     // remove existing subtitle if there is one
-    if ( playerSts.current_subtitle ) {
-      vrView.subtitle( playerSts.current_subtitle ) ;
-      playerSts.current_subtitle = undefined ;
+    if ( sts.current_subtitle ) {
+      vrView.subtitle( sts.current_subtitle ) ;
+      sts.current_subtitle = undefined ;
     }
 
     var subtitleText = res[0].text ;
     vrView.subtitle( subtitleText ); 
-    playerSts.current_subtitle = subtitleText ;
+    sts.current_subtitle = subtitleText ;
   }
+}
+
+function switchVideo( video_fn, video_type ) {
+  sts.cantChangeVideo = true;
+
+  params = {};
+  if (video_fn.indexOf("invasion") > -1) {
+      params.is_stereo = true;
+  } else {
+      params.is_stereo = false;
+  }
+
+  if (video_type === "background") {
+    console.log("Switched to background");
+    sts.specs.current_video_fn = video_fn;
+    params.video = video_fn + "#t=" + 0;
+    params.default_yaw_radians = sts.theta.current ;
+
+    console.log(params);
+    vrView.setContent(params);
+    playButton.classList.remove('paused');
+
+  } else if (video_type === "main") {
+
+    console.log("Switched to main");
+    sts.specs.current_video_fn = video_fn;
+    params.video = video_fn + "#t=" + sts.currentTime;
+    params.default_yaw_radians = sts.theta.current;
+    console.log(params);
+
+    vrView.setContent(params);
+    playButton.classList.remove('paused');
+    
+  }
+  setTimeout(function(){
+    sts.cantChangeVideo = false;
+  }, 1000)
+}
+
+function isThetaInBoundary(cur_theta, imp_theta, poffset){
+  var left_bound = imp_theta - poffset;
+  var right_bound = imp_theta + poffset;
+
+  var within_imp_to_left_bound = cur_theta > left_bound && cur_theta <= imp_theta;
+  var within_imp_to_right_bound = cur_theta < right_bound && cur_theta >= imp_theta;
+
+  if (left_bound < circle_low) {
+    var adj_left_bound = circle_high - (circle_low - left_bound);
+    within_imp_to_left_bound = cur_theta > adj_left_bound || cur_theta <= imp_theta;
+  } 
+
+  if (right_bound > circle_high) {
+    var adj_right_bound = cicle_low + (right_bound - circle_high);
+    within_imp_to_right_bound = cur_theta >= imp_theta || cur_theta < adj_right_bound;
+  }
+
+  if (within_imp_to_right_bound || within_imp_to_left_bound) {
+    return true;
+  } 
+  return false;
+}
+
+function changeVideoBasedOnOrientation(){
+
+  // get the possible orientations
+  var orientations = sts.specs.possible_orientations;
+  var current_orientation = sts.theta.current;
+  var possible_offset = Math.PI/PI_DENOMINATOR; // TODO make customizable
+  var within_one_boundary = false;
+
+  // we're only going to restrict this if there are orientations
+  if (orientations.length > 0) {
+    for (var i = 0; i < orientations.length; i++) {
+        var orient = orientations[i];
+        // only set if not already true
+        within_one_boundary = isThetaInBoundary(current_orientation, orient, possible_offset) || within_one_boundary;
+    };
+  } else {
+    within_one_boundary = true;
+  }
+
+  // if we're in the boundary and not playing the main video
+  // switch to the main video
+  if (within_one_boundary 
+    && sts.specs.current_video_fn !== sts.specs.video_fn
+    && !sts.cantChangeVideo) {
+
+    switchVideo(sts.specs.video_fn, "main");
+
+  // if we're outside of the boundary and not playing the background video
+  // switch to the background video
+  } else if (!within_one_boundary
+    && sts.specs.background_video_fn // we need to actually have one specified though
+    && sts.specs.current_video_fn !== sts.specs.background_video_fn
+    && !sts.cantChangeVideo) {
+
+    switchVideo(sts.specs.background_video_fn, "background");
+
+  }
+
+  sts.current_theta_dirty = false;
+  sts.specs.possible_orientations_dirty = false;
+}
+
+function changeShotBasedOnHistoryOrPause() {
+  // for now we're just going to jump to the main shot
+  // if we're in establishing shot and meets criteria
+  var history_criteria = (lookedInAllDirections() && sts.cuts.history_shot_change);
+  var pause_criteria = (pausedLookingAround() && sts.cuts.pause_shot_change);
+
+  if (sts.cuts.current_shot.name === "establishing-shot"
+    && (history_criteria || pause_criteria)) {
+    var main_shot = sts.specs.playback.shots.filter(function(s){
+      return s.name === "main";
+    });
+    if (main_shot.length > 0) {
+      vrView.seek(main_shot[0].start);
+    }
+  }
+} 
+
+function filterBasedOnOrientationInteractions(){
+  var orientation_information_is_changed = sts.specs.possible_orientations_dirty || sts.current_theta_dirty;
+
+  if (sts.specs.mode === "optional_cuts") {
+    // orientation change options
+    if (sts.specs.orientationpause && orientation_information_is_changed) {
+      playOrPauseBasedOnOrientation();
+    } else if (sts.specs.orientationvideochange && orientation_information_is_changed) {
+      changeVideoBasedOnOrientation();
+    }
+
+    // shot change options
+    if (sts.specs.playback.shots 
+      && sts.cuts.pause_shot_change || sts.cuts.history_shot_change) {
+      changeShotBasedOnHistoryOrPause();
+    }
+  } 
 }
 
 function listenForCurrentTime() {
@@ -375,35 +631,52 @@ function listenForCurrentTime() {
 
   iframe.addEventListener("currenttimeanswer" , function(e){
     // update that current time!
-    playerSts.currentTime = e.detail;
-    
-    // also, update the orientation accordingly
-    if (playerSts.specs.mode === "optional_cuts") {
-      updateOrientationOptions();
+    var last_current_time = sts.currentTime;
 
-      if (playerSts.specs.orientationpause) {
-        playOrPauseBasedOnOrientation();
+    // if time has updated and its not the background video
+    if (last_current_time !== e.detail
+      && (!sts.specs.background_video_fn 
+       || sts.specs.background_video_fn !== sts.specs.current_video_fn)) {
+
+      // console.log(sts.currentTime + ", "  + sts.theta.current + ", " + sts.specs.current_video_fn);
+      sts.currentTime = e.detail;
+
+      if (sts.specs.subtitles && sts.specs.playback) {
+        updateSubtitle();
       }
-      
-
-    } else if (playerSts.specs.mode === "forced_cuts") {
-      updateOrientation();
+      if (sts.timeline) {
+        updateTimeline();
+        $('#currentTime').text(sts.currentTime);
+      } 
+      if (sts.specs.playback && sts.specs.playback.shots) {
+        updateShot();
+      }
+      updateOrientationOptions();
+      filterBasedOnOrientationInteractions();
     }
-
-    if (playerSts.specs.subtitles && playerSts.specs.playback) {
-      updateSubtitle();
-    }
-
-    if (playerSts.timeline) {
-      updateTimeline();
-      $('#currentTime').text(playerSts.currentTime);
-    }
-    
   });
 
   // this could be useful
   iframe.addEventListener("getorientationanswer" , function(e) {
-    playerSts.currentTheta = e.detail +  1.570796326794897; // TODO fix this hacky fix to offset problem
+    
+    var new_theta = e.detail +  sts.setOrientationOffset;
+
+    if (new_theta !== sts.theta.current) {
+
+      // we only want to update last theta/time changed if the 
+      // theta looks like its more than noise
+      if (Math.abs(new_theta - sts.theta.current) > sts.theta.rec_change) {
+        sts.theta.last = sts.theta.current;
+        var d = new Date();
+        sts.theta.time_set = d.getTime();
+        sts.theta.shot_history.push(sts.theta.current);
+      }
+      // we'll update the new theta no matter what
+      sts.theta.current = new_theta;
+      
+      sts.current_theta_dirty = true;
+      filterBasedOnOrientationInteractions();
+    }
   });
 
   // but also we need to ask for it all of the time :(
@@ -412,10 +685,6 @@ function listenForCurrentTime() {
     vrView.getOrientation(); 
   }, 1000/29);
 }
-
-// first time play?
-var firstTimePlay = true;
-VIDEO_START_TIME = null;
 
 function isTouchCardboardButton(e) {
   var clientHeight = e.target.clientHeight;
@@ -456,7 +725,7 @@ function onVRViewReady() {
   }
   listenForCurrentTime();
 
-  setupTimeline(playerSts.specs.video_fn);
+  setupTimeline(sts.specs.video_fn);
 
   $(getIframedocument()).on('touchstart', function(e){
       if (isTouchCardboardButton(e)) {
@@ -468,49 +737,43 @@ function onVRViewReady() {
 function playOrPauseBasedOnOrientation() {
 
   // get the possible orientations
-  var orientations = playerSts.specs.possible_orientations;
-  var current_orientation = playerSts.currentTheta;
-  var possible_offset = Math.PI/2; // TODO make customizable
-
-  if (!orientations) {
-    orientations = [0];
-  }
+  var orientations = sts.specs.possible_orientations;
+  var current_orientation = sts.theta.current;
+  var possible_offset = Math.PI/PI_DENOMINATOR; // TODO make customizable
 
   var within_one_boundary = false;
 
-  for (var i = 0; i < orientations.length; i++) {
-      var orient = orientations[i];
-
-      var lower_bound = orient - possible_offset;
-      var upper_bound = orient + possible_offset;
-
-      // if within boundaries play that thing
-      if (lower_bound < current_orientation
-          && current_orientation < upper_bound) {
-
-        within_one_boundary = true;
-      } 
-  };
+  // we're only going to restrict this if there are orientations
+  if (orientations) {
+    for (var i = 0; i < orientations.length; i++) {
+        var orient = orientations[i];
+        within_one_boundary = isThetaInBoundary(current_orientation, orient, possible_offset) || within_one_boundary; 
+    };
+  } else {
+    within_one_boundary = true;
+  }
 
   if (within_one_boundary
-      && playerSts.pausedFromOrientation 
-        && vrView.isPaused) {
+    && sts.pausedFromOrientation 
+      && vrView.isPaused) {
 
     // if the video is not playing, play the video
     onTogglePlay();
-    playerSts.pausedFromOrientation = false;
+    sts.pausedFromOrientation = false;
 
   } else if (!within_one_boundary && !vrView.isPaused) {
     onTogglePlay();
     // if the video is not paused, pause the video
-    playerSts.pausedFromOrientation = true; // TODO: hacky fix
+    sts.pausedFromOrientation = true; // TODO: hacky fix
   }
 
+  sts.current_theta_dirty = false;
+  sts.specs.possible_orientations_dirty = false;
 }
 
 function onToggleOrientation() {
-  var orientations = playerSts.specs.possible_orientations;
-  var i = playerSts.specs.next_orientation_i;
+  var orientations = sts.specs.possible_orientations;
+  var i = sts.specs.next_orientation_i;
 
   if (orientations.length > 0 && i !== undefined) {
     // set orientation to the next orientation
@@ -518,9 +781,9 @@ function onToggleOrientation() {
 
     // figure out the next orientation_i;
     if ( i + 1 < orientations.length ) {
-      playerSts.specs.next_orientation_i = i + 1;
+      sts.specs.next_orientation_i = i + 1;
     } else {
-      playerSts.specs.next_orientation_i = 0;
+      sts.specs.next_orientation_i = 0;
     }
   }
 }
@@ -553,39 +816,73 @@ function onToggleMute() {
 }
 
 function onToggleForcedCuts() {
-  if (playerSts.specs.mode === "forced_cuts") {
-    playerSts.specs.mode = "optional_cuts";
+  if (sts.specs.mode === "forced_cuts") {
+    sts.specs.mode = "optional_cuts";
     $(forcedcutsButton).text("Switch to forced cuts");
     $(orientationButton).removeClass("disabled");
-  } else if (playerSts.specs.mode === "optional_cuts"){
-    playerSts.specs.mode = "forced_cuts";
+  } else if (sts.specs.mode === "optional_cuts"){
+    sts.specs.mode = "forced_cuts";
     $(forcedcutsButton).text("Switch to optional cuts");
     $(orientationButton).addClass("disabled");
   }
 }
 
+function onTogglePauseShotChange() {
+  if (!sts.cuts.pause_shot_change) { 
+    sts.cuts.pause_shot_change = true;
+    $(pauseshotchangeButton).text("Turn off pause shot change");
+  } else {
+    sts.cuts.pause_shot_change = false;
+    $(pauseshotchangeButton).text("Turn on pause shot change");
+  }
+}
+
+function onToggleHistoryShotChange() {
+  if (!sts.cuts.history_shot_change) { 
+    sts.cuts.history_shot_change = true;
+    $(historyshotchangeButton).text("Turn off history shot change");
+  } else {
+    sts.cuts.history_shot_change = false;
+    $(historyshotchangeButton).text("Turn on history shot change");
+  }
+}
+
 function onToggleOrientationPause() {
 
-  if (playerSts.specs.orientationpause === true) {
-    playerSts.specs.orientationpause = false;
+  if (sts.specs.orientationpause === true) {
+    sts.specs.orientationpause = false;
     console.log("orientation pause is false");
     $(orientationPauseButton).text("Turn on orientation pause");
 
   } else {
-    playerSts.specs.orientationpause = true;
+    sts.specs.orientationpause = true;
     console.log("orientation pause is true");
     $(orientationPauseButton).text("Turn off orientation pause");
   }
 }
 
+function onToggleOrientationVideoChange() {
+
+  if (sts.specs.orientationvideochange === true) {
+    sts.specs.orientationvideochange = false;
+    console.log("orientation video change is false");
+    $(orientationVideoChangeButton).text("Turn on orientation video change");
+
+  } else {
+    sts.specs.orientationvideochange = true;
+    console.log("orientation video change is true");
+    $(orientationVideoChangeButton).text("Turn off orientation video change");
+  }
+}
+
 function onToggleSubtitles() {
-  if (playerSts.specs.subtitles) {
+  if (sts.specs.subtitles) {
     $(subtitlesButton).text("Turn on subtitles");
-    playerSts.specs.subtitles = false;
-    vrView.subtitle(playerSts.current_subtitle);
+    sts.specs.subtitles = false;
+    vrView.subtitle(sts.current_subtitle);
   } else {
     $(subtitlesButton).text("Turn off subtitles");
-    playerSts.specs.subtitles = true;
+    sts.specs.subtitles = true;
   }
 }
 

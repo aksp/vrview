@@ -10895,7 +10895,7 @@ function onAddHotspot(e) {
   worldRenderer.hotspotRenderer.add(pitch, yaw, radius, distance, id);
 }
 
-function onSetContent(e) {
+function onSetContent(e) { // Amy - deleted fade to black lag
   var currentTime;
 
   if (Util.isDebug()) {
@@ -10905,27 +10905,15 @@ function onSetContent(e) {
 
   // Remove all of the hotspots.
   worldRenderer.hotspotRenderer.clearAll();
-  // Fade to black.
-  worldRenderer.sphereRenderer.setOpacity(0, 500).then(function() {
-    // Then load the new scene.
-    var scene = SceneInfo.loadFromAPIParams(e.contentInfo);
-    worldRenderer.destroy();
+  
+  // Then load the new scene.
+  var scene = SceneInfo.loadFromAPIParams(e.contentInfo);
+  var url = scene.getCurrentUrl();
+  window.history.pushState(null, 'VR View', url);
 
-    // Update the URL to reflect the new scene. This is important particularily
-    // on iOS where we use a fake fullscreen mode.
-    var url = scene.getCurrentUrl();
-    //console.log('Updating url to be %s', url);
-    window.history.pushState(null, 'VR View', url);
-
-    // And set the new scene.
-    return worldRenderer.setScene(scene);
-  }).then(function() {
-    // Then fade the scene back in.
-    worldRenderer.sphereRenderer.setOpacity(1, 500);
-    // worldRenderer.videoProxy.pause();
-    // worldRenderer.videoProxy.seek(currentTime);
-    // worldRenderer.videoProxy.play();
-  });
+  // And set the new scene.
+  worldRenderer.destroy();
+  worldRenderer.setScene(scene);
 }
 
 function onSetVolume(e) {
@@ -10970,9 +10958,7 @@ function onSetOrientation(orientation) {
     // reset the pose and rotate the reset pose
     worldRenderer.vrDisplay.resetPose();
     worldRenderer.vrDisplay.resetPoseRotate(rotationQ2);
-
   }
-
 }
 
 function onApiError(message) {
@@ -11181,6 +11167,7 @@ var CAMEL_TO_UNDERSCORE = {
   preview: 'preview',
   isStereo: 'is_stereo',
   defaultYaw: 'default_yaw',
+  defaultYawRadians: 'default_yaw_radians', // Amy - spec in radians
   isYawOnly: 'is_yaw_only',
   isDebug: 'is_debug',
   isVROff: 'is_vr_off',
@@ -11197,6 +11184,9 @@ function SceneInfo(opt_params) {
   this.preview = params.preview;
   this.video = params.video;
   this.defaultYaw = THREE.Math.degToRad(params.defaultYaw || 0);
+  if (params.defaultYawRadians) {
+    this.defaultYaw = params.defaultYawRadians;
+  }
 
   this.isStereo = Util.parseBoolean(params.isStereo);
   this.isYawOnly = Util.parseBoolean(params.isYawOnly);
@@ -11343,6 +11333,7 @@ SphereRenderer.prototype.set360Video = function(videoElement, opt_params) {
     videoTexture.format = THREE.RGBFormat;
     videoTexture.generateMipmaps = false;
     videoTexture.needsUpdate = true;
+
 
     this.onTextureLoaded_(videoTexture);
   }.bind(this));
@@ -11519,16 +11510,11 @@ VideoProxy.prototype.emphasize = function(rotation) {
 // iframe an event with the current time in it
 VideoProxy.prototype.currentTime = function() {
   var currentTime = this.videoElement.currentTime;
-  //console.log(currentTime);
+
   var myCustomEvent = new CustomEvent('currenttimeanswer', {"detail": currentTime});
   document.dispatchEvent(myCustomEvent);
   return currentTime;
-  //console.log(this.videoElement.currentTime); 
 }
-
-// VideoProxy.prototype.subtitle = function(subtitleText){
-//   this.videoElement.subtitle = subtitleText;
-// }
 
 VideoProxy.prototype.pause = function() {
   if (Util.isIOS9OrLess() && this.isFakePlayback) {
@@ -11666,11 +11652,37 @@ WorldRenderer.prototype.setScene = function(scene) {
     this.didLoadFail_(scene.errorMessage);
     return;
   }
-
   var params = {
     isStereo: scene.isStereo,
   };
-  this.setDefaultYaw_(scene.defaultYaw || 0);
+
+  function setOrientation(worldRenderer, orientation) {
+    // Amy - for now, different methods for different displays
+    if (worldRenderer.vrDisplay.displayName === "Mouse and Keyboard VRDisplay (webvr-polyfill)" ) {
+      worldRenderer.vrDisplay.theta_ = orientation;
+
+    } else if (worldRenderer.vrDisplay.displayName === 'Cardboard VRDisplay (webvr-polyfill)') {
+      // set quaternion from orientation theta using same method as MouseKeyboard
+      var rotationQ1 = new MathUtil.Quaternion();
+      rotationQ1.setFromEulerYXZ( 0, 0, orientation ); // phi, theta, 0
+
+      // convert mathutil.quaternion to three.quaternion
+      var rotationQ2 = new THREE.Quaternion(); 
+      rotationQ2.set( rotationQ1.x, rotationQ1.y, rotationQ1.z, rotationQ1.w );
+
+      // reset the pose and rotate the reset pose
+      worldRenderer.vrDisplay.resetPose();
+      worldRenderer.vrDisplay.resetPoseRotate(rotationQ2);
+    }
+  };
+
+  //this.setDefaultYaw_(scene.defaultYaw || 0);
+  if (scene.defaultYaw) {
+    setOrientation(self, scene.defaultYaw);
+  } else {
+    this.setDefaultYaw_(0);
+  }
+  
 
   // Disable VR mode if explicitly disabled, or if we're loading a video on iOS
   // 9 or earlier.
