@@ -1,0 +1,96 @@
+{
+  "subtitles": [],
+  "orientation": [
+    {
+      "start": 0.0,
+      "end": 8.701132,
+      "orientations": [
+        0
+      ]
+    },
+    {
+      "start": 8.701132,
+      "end": 52.983,
+      "orientations": []
+    },
+    {
+      "start": 52.983,
+      "end": 63.501431,
+      "orientations": [
+        0.975202722779924
+      ]
+    },
+    {
+      "start": 63.501431,
+      "end": 69.658633,
+      "orientations": [
+        0.28143431641301975
+      ]
+    },
+    {
+      "start": 69.658633,
+      "end": 98.298369,
+      "orientations": [
+        0.28143431641301975,
+        -0.892299585843336
+      ]
+    },
+    {
+      "start": 98.298369,
+      "end": 111.594524,
+      "orientations": [
+        -1.2130038485537202
+      ]
+    },
+    {
+      "start": 111.594524,
+      "end": 136.488818,
+      "orientations": [
+        -1.2435470807016022,
+        1.5489797224062523
+      ]
+    },
+    {
+      "start": 136.488818,
+      "end": 163.908929,
+      "orientations": [
+        -1.180278968212709,
+        1.4551683227438017
+      ]
+    },
+    {
+      "start": 163.908929,
+      "end": 250.0,
+      "orientations": [
+        -0.9162978382074534,
+        -1.2282753851351766
+      ]
+    }
+  ],
+  "shots": [
+    {
+    "name": "establishing-shot", 
+    "start": 9,
+    "end": 55,
+    "video": "main"
+    }, 
+    {
+      "name": "main",
+      "start": 55,
+      "end": 999,
+      "video": "main"
+    }
+  ], 
+  "videos": [
+    {
+      "fn": "videos/invasion.mp4",
+      "stereo": true,
+      "name": "main"
+    },
+    {
+      "fn": "establishing-shot-videos/invasion.mp4",
+      "stereo": true,
+      "name": "establishing-shot"
+    }
+  ]
+}

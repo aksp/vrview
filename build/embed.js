@@ -10181,6 +10181,7 @@ IFrameMessageReceiver.prototype.onMessage_ = function(event) {
     case Message.EMPHASIZE:
     case Message.SET_ORIENTATION:
     case Message.SUBTITLE:
+    case Message.TITLE:
     case Message.RECORD:
     case Message.CURRENTTIME:
     case Message.GET_ORIENTATION:
@@ -10650,6 +10651,8 @@ receiver.on(Message.PAUSE, onPauseRequest);
 receiver.on(Message.SEEK, onSeekRequest);
 receiver.on(Message.EMPHASIZE, onEmphasizeRequest);
 receiver.on(Message.SUBTITLE, onSubtitleRequest);
+receiver.on(Message.TITLE, onTitleRequest);
+
 receiver.on(Message.RECORD, onRecordRequest);
 receiver.on(Message.CURRENTTIME, onCurrentTimeRequest);
 receiver.on(Message.ADD_HOTSPOT, onAddHotspot);
@@ -10722,6 +10725,7 @@ function onRenderLoad(event) {
     event.videoElement.addEventListener('seek', onSeek);
     event.videoElement.addEventListener('emphasize', onEmphasize);
     event.videoElement.addEventListener('subtitle', onSubtitle);
+    event.videoElement.addEventListener('title', onTitle);
     event.videoElement.addEventListener('record', onRecord);
     event.videoElement.addEventListener('currentTime', onCurrentTime);
   }
@@ -10771,53 +10775,99 @@ function onEmphasizeRequest(rotation) {
   worldRenderer.vrDisplay.setEmphasis(rotation);
 }
 
-// Amy
-function displaySubtitle(subtitleText) {
-  // from - http://stackoverflow.com/questions/23351835/clickable-sprite-labels#comment35916361_23351835
-  // http://jsfiddle.net/J5d7h/11/
-  function textSprite(text, params) {
-      var font = "Arial",
-              size = 100,
-              color = "#ffff00";
-          padding = 10;
+// based off of - http://stackoverflow.com/questions/23351835/clickable-sprite-labels#comment35916361_23351835
+// http://jsfiddle.net/J5d7h/11/
+function textSprite(text, params) {
+    // either use default or parameters
+    var font = params ? params.font : "Arial",
+        size = params ? params.size : 100,
+        color = params ? params.color : "#ffff00";
+        padding = params ? params.padding : 10;
 
-      font = "bold " + size + "px " + font;
+    font = "bold " + size + "px " + font;
 
-      var canvas = document.createElement('canvas');
-      var context = canvas.getContext('2d');
-      context.font = font;
+    var canvas = document.createElement('canvas');
+    var context = canvas.getContext('2d');
+    context.font = font;
 
-      // get size data (height depends only on font size)
-      var metrics = context.measureText(text),
-          textWidth = metrics.width;
+    // get size data (height depends only on font size)
+    var metrics = context.measureText(text),
+        textWidth = metrics.width;
 
-      canvas.width = textWidth + 3;
-      canvas.height = size + 3;
+    canvas.width = textWidth + 3;
+    canvas.height = size + 3;
 
-      context.font = font;
-      context.fillStyle = color;
-      context.fillText(text, 0, size + 3);
-      //context.style.border="3px solid blue";
+    context.font = font;
+    context.fillStyle = color;
+    context.fillText(text, 0, size + 3);
+    //context.style.border="3px solid blue";
 
-      // canvas contents will be used for a texture
-      var texture = new THREE.Texture(canvas);
-      texture.needsUpdate = true;
+    // canvas contents will be used for a texture
+    var texture = new THREE.Texture(canvas);
+    texture.needsUpdate = true;
 
-      var mesh = new THREE.Mesh(
+    // Amy - trying to make text background transparent
+    var material1 = new THREE.MeshBasicMaterial({map: texture, side: THREE.DoubleSide});
+    material1.transparent = params ? params.transparent : false;
+
+    var mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(canvas.width, canvas.height),
-      new THREE.MeshBasicMaterial({
-          map: texture,
-          side: THREE.DoubleSide
-      }));
-      return mesh;
-  }
+      material1
+    );
 
-  // Amy - function to create subtitle
-  var sprite = textSprite(subtitleText);
+    return mesh;
+}
+
+// Amy - function to display title
+function displayTitle(titleText, lat, lon) {
+
+  params = {
+    size: 100,
+    color: "white",
+    padding: 10,
+    font: "Arial",
+    transparent: true,
+  };
+
+  var sprite = textSprite(titleText, params);
+  sprite.name = titleText;
+  sprite.scale.normalize().multiplyScalar(0.0009);
+  worldRenderer.scene.add( sprite );
+  
+
+  var phi   = (90-lat)*(Math.PI/180);
+  var theta = (lon+180)*(Math.PI/180);
+  var radius = 1.000000038125435;
+
+  var mx = -((radius) * Math.sin(phi)*Math.cos(theta));
+  var mz = ((radius) * Math.sin(phi)*Math.sin(theta));
+  var my = ((radius) * Math.cos(phi));
+  var x = mx/2;
+  var y = my/2;
+  var z = mz/2;
+
+  sprite.position.set(x,y,z);
+
+  var center = new THREE.Vector3(0,0,0);
+  sprite.lookAt(center);
+}
+
+// Amy - function to create subtitle
+function displaySubtitle(subtitleText) {
+
+  params = {
+    size: 100,
+    color: "#ffff00",
+    padding: 10,
+    font: "Arial",
+    transparent: false,
+  };
+
+  var sprite = textSprite(subtitleText, params);
   sprite.name = subtitleText;
   sprite.scale.normalize().multiplyScalar(0.0009);
   worldRenderer.camera.add( sprite );
-  sprite.position.set(0,-.3, -.6);
+  sprite.position.set(0,-.25, -.6);
 }
 
 // Amy
@@ -10838,6 +10888,31 @@ function onSubtitleRequest(subtitleText) {
   } else {
     displaySubtitle(subtitleText);
     console.log("Called displaySubtitle")
+  }
+}
+
+function removeTitle(titleText) {
+  var title = worldRenderer.scene.getObjectByName(titleText);
+  worldRenderer.scene.remove(title);
+  console.log("Attempted to remove: " + titleText);
+}
+
+function onTitleRequest(titleText_lat_lon) {
+  console.log(sl);
+
+  var sl = titleText_lat_lon.split(";");
+  var titleText = sl[0];
+  var lat = parseInt(sl[1]);
+  var lon = parseInt(sl[2]);
+
+  var title = worldRenderer.camera.getObjectByName(titleText); 
+  console.log("getObjectByName: " + title);
+  if (title) {
+    removeTitle(titleText);
+    console.log("Called removeTitle");
+  } else {
+    displayTitle(titleText, lat, lon);
+    console.log("Called displayTitle")
   }
 }
 
@@ -10908,11 +10983,12 @@ function onSetContent(e) { // Amy - deleted fade to black lag
   
   // Then load the new scene.
   var scene = SceneInfo.loadFromAPIParams(e.contentInfo);
+  worldRenderer.destroy();
+
   var url = scene.getCurrentUrl();
   window.history.pushState(null, 'VR View', url);
 
   // And set the new scene.
-  worldRenderer.destroy();
   worldRenderer.setScene(scene);
 }
 
@@ -11014,6 +11090,13 @@ function onEmphasize(m) {
 function onSubtitle(m) {
   Util.sendParentMessage({
     type: 'subtitle',
+    data: m.data
+  });
+}
+
+function onTitle(m) {
+  Util.sendParentMessage({
+    type: 'title',
     data: m.data
   });
 }
@@ -11957,6 +12040,7 @@ var Message = {
   // ROTATE: 'rotate',
   EMPHASIZE: 'emphasize',
   SUBTITLE: 'subtitle',
+  TITLE: 'title',
   RECORD: 'record',
   ADD_HOTSPOT: 'addhotspot',
   SET_CONTENT: 'setimage',

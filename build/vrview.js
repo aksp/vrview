@@ -505,6 +505,9 @@ Player.prototype.emphasize = function(rotation) {
 Player.prototype.subtitle = function(subtitle_text) {
   this.sender.send({type: Message.SUBTITLE, data: subtitle_text});
 };
+Player.prototype.title = function(title_text) {
+  this.sender.send({type: Message.TITLE, data: title_text});
+};
 
 Player.prototype.record = function(b) {
   this.sender.send({type: Message.RECORD, data: b});
@@ -697,6 +700,7 @@ var Message = {
   SEEK: 'seek', // Amy - Add seek info
   EMPHASIZE: 'emphasize',
   SUBTITLE: 'subtitle',
+  TITLE: 'title',
   RECORD: 'record',
 };
 

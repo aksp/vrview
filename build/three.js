@@ -24189,6 +24189,7 @@ exports.PerspectiveCamera = PerspectiveCamera;
 exports.Object3DIdCount = Object3DIdCount;
 exports.Object3D = Object3D;
 exports.Raycaster = Raycaster;
+exports.Ray = Ray;
 exports.Quaternion = Quaternion;
 exports.Euler = Euler;
 exports.Matrix4 = Matrix4;

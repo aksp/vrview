@@ -89,7 +89,7 @@ function pausedLookingAround(){
 };
 
 function lookedInAllDirections(){
-  var req = range(circle_low, circle_high, FOV_RADIANS);
+  var req = range(circle_low, circle_high, FOV_RADIANS*2);
 
   // http://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
   var zeros = Array.apply(null, Array(req.length)).map(Number.prototype.valueOf,0);
@@ -537,7 +537,7 @@ function isThetaInBoundary(cur_theta, imp_theta, poffset){
   } 
 
   if (right_bound > circle_high) {
-    var adj_right_bound = cicle_low + (right_bound - circle_high);
+    var adj_right_bound = circle_low + (right_bound - circle_high);
     within_imp_to_right_bound = cur_theta >= imp_theta || cur_theta < adj_right_bound;
   }
 
