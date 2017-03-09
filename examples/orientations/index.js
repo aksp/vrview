@@ -13,8 +13,8 @@ var pauseshotchangeButton;
 var timelineSlider;
 var durationVideoPlayer;
 
-var PI_DENOMINATOR = 4;
-var FOV_RADIANS = 0.20;
+var PI_DENOMINATOR = 3.2;
+var FOV_RADIANS = 0.5;
 var circle_high = Math.PI + Math.PI/2;
 var circle_low = - Math.PI/2;
 
@@ -105,7 +105,7 @@ function lookedInAllDirections(){
 
   // if we've visited (almost)? every section
   console.log(zeros.filter(function(x){return x==1}).length +"/" +zeros.length);
-  if (zeros.filter(function(x){return x==1}).length >= zeros.length - 3) {
+  if (zeros.filter(function(x){return x==1}).length >= zeros.length) {
     return true;
   }
   return false;
@@ -113,7 +113,7 @@ function lookedInAllDirections(){
 
 
 function isMobile() {
-  if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+  if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
     return true;
   } 
   return false;
@@ -247,7 +247,7 @@ function setTimelineKeycodes() {
       onTogglePlay();
 
     // if you've pressed o, add the time and current orientation to a new line
-    } else if ( k === 111 && $(e.target).attr("id") !== "spec-composer") {
+    } else if (k === 111 && $(e.target).attr("id") !== "spec-composer") {
         addOrientationChange(sts.currentTime, sts.theta.current);
 
     // if you've pressed an m, append an orientation to the last line
@@ -352,8 +352,8 @@ function onLoad() {
   console.log("Background video: " + sts.specs.background_video_fn);
 
   // load playback instructions if there is a spec json
-  if ( sts.specs.fn && sts.specs.fn.toLowerCase().indexOf(".json") > -1) {
-    $.getJSON(sts.specs.fn, function( data ) {
+  if (sts.specs.fn && sts.specs.fn.toLowerCase().indexOf(".json") > -1) {
+    $.getJSON(sts.specs.fn, function(data) {
       sts.specs.playback = data;
 
       // todo: create player that cuts between multiple videos
@@ -372,13 +372,13 @@ function onLoad() {
       }
     });
   } else if (sts.specs.fn 
-          && sts.specs.fn.toLowerCase().indexOf(".mp4") > -1 ) {
+          && sts.specs.fn.toLowerCase().indexOf(".mp4") > -1) {
 
     // otherwise we're just going to load the video
     if (sts.specs.fn.indexOf("?stereo=") > -1) {
 
       sts.specs.video_fn = sts.specs.fn.split("?stereo=")[0];
-      sts.specs.stereo = ( sts.specs.fn.split("?stereo=")[1] == 'true' );
+      sts.specs.stereo = (sts.specs.fn.split("?stereo=")[1] == 'true');
 
     } else {
 
@@ -463,6 +463,12 @@ function updateShot() {
   }
 }
 
+function thetaToTitleDir(theta) {
+  var l = theta * 180 / Math.PI;
+  l += 180; // weird offset
+  return "0" + ";" + l % 360;
+}
+
 function updateSubtitle() {
   // get relevant subtitles
   var res = $(sts.specs.playback.subtitles).filter(function(){
@@ -476,20 +482,35 @@ function updateSubtitle() {
       && res[0].text !== sts.current_subtitle) {
 
     // remove existing subtitle if there is one
-    if ( sts.current_subtitle ) {
-      vrView.subtitle( sts.current_subtitle ) ;
+    if (sts.current_subtitle) {
+      if (sts.current_subtitle_title_mode) {
+        vrView.title(sts.current_subtitle);
+      } else {
+        vrView.subtitle(sts.current_subtitle) ;
+      }
+      
       sts.current_subtitle = undefined ;
+      sts.current_subtitle_title_mode = undefined ;
     }
 
     var subtitleText = res[0].text ;
-    vrView.subtitle( subtitleText ); 
+    var isTitleMode = res[0].title_mode ;
+
+    if (isTitleMode)  {
+      var theta = sts.theta.current;
+      var title_dir = thetaToTitleDir(theta);
+      vrView.title(subtitleText + ";" + title_dir);
+    } else {
+      vrView.subtitle(subtitleText); 
+    }
+    
     sts.current_subtitle = subtitleText ;
+    sts.current_subtitle_title_mode = res[0].title_mode ;
   }
 }
 
-function switchVideo( video_fn, video_type ) {
+function switchVideo(video_fn, video_type) {
   sts.cantChangeVideo = true;
-
   params = {};
   if (video_fn.indexOf("invasion") > -1) {
       params.is_stereo = true;
@@ -500,7 +521,11 @@ function switchVideo( video_fn, video_type ) {
   if (video_type === "background") {
     console.log("Switched to background");
     sts.specs.current_video_fn = video_fn;
-    params.video = video_fn + "#t=" + 0;
+
+    params.video = video_fn;
+    if (video_fn.indexOf("#t=") < 0) {
+      params.video = video_fn + "#t=" + 0;
+    } 
     params.default_yaw_radians = sts.theta.current ;
 
     console.log(params);
@@ -518,10 +543,10 @@ function switchVideo( video_fn, video_type ) {
     vrView.setContent(params);
     playButton.classList.remove('paused');
     
-  }
+  } 
   setTimeout(function(){
     sts.cantChangeVideo = false;
-  }, 1000)
+  }, 500)
 }
 
 function isThetaInBoundary(cur_theta, imp_theta, poffset){
@@ -696,8 +721,8 @@ function isTouchCardboardButton(e) {
 
   // if the x is between 40%-60% of width and y is in top 20%
   // TODO: also check cardboard mode
-  if ( x/clientWidth > .4 && x/clientWidth < .6
-    && y/clientHeight < .2 ) {
+  if (x/clientWidth > .4 && x/clientWidth < .6
+    && y/clientHeight < .2) {
     console.log("Detected cardboard touch");
     return true;
   } else {
@@ -780,7 +805,7 @@ function onToggleOrientation() {
     vrView.setOrientation(orientations[i]); 
 
     // figure out the next orientation_i;
-    if ( i + 1 < orientations.length ) {
+    if (i + 1 < orientations.length) {
       sts.specs.next_orientation_i = i + 1;
     } else {
       sts.specs.next_orientation_i = 0;

@@ -10905,7 +10905,7 @@ function onTitleRequest(titleText_lat_lon) {
   var lat = parseInt(sl[1]);
   var lon = parseInt(sl[2]);
 
-  var title = worldRenderer.camera.getObjectByName(titleText); 
+  var title = worldRenderer.scene.getObjectByName(titleText); 
   console.log("getObjectByName: " + title);
   if (title) {
     removeTitle(titleText);
