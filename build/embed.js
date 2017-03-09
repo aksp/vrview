@@ -11746,12 +11746,29 @@ WorldRenderer.prototype.setScene = function(scene) {
 
     } else if (worldRenderer.vrDisplay.displayName === 'Cardboard VRDisplay (webvr-polyfill)') {
       // set quaternion from orientation theta using same method as MouseKeyboard
-      var rotationQ1 = new MathUtil.Quaternion();
-      rotationQ1.setFromEulerYXZ( 0, 0, orientation ); // phi, theta, 0
+      // var rotationQ1 = new MathUtil.Quaternion();
+
+      // copied from MathUtil because safari is dumb
+      var x = 0; 
+      var y = 0;
+      var z = orientation;
+
+      var c1 = Math.cos( x / 2 );
+      var c2 = Math.cos( y / 2 );
+      var c3 = Math.cos( z / 2 );
+      var s1 = Math.sin( x / 2 );
+      var s2 = Math.sin( y / 2 );
+      var s3 = Math.sin( z / 2 );
+
+      var rx = s1 * c2 * c3 + c1 * s2 * s3;
+      var ry = c1 * s2 * c3 - s1 * c2 * s3;
+      var rz = c1 * c2 * s3 - s1 * s2 * c3;
+      var rw = c1 * c2 * c3 + s1 * s2 * s3;
+      // rotationQ1.setFromEulerYXZ( 0, 0, orientation ); // phi, theta, 0
 
       // convert mathutil.quaternion to three.quaternion
       var rotationQ2 = new THREE.Quaternion(); 
-      rotationQ2.set( rotationQ1.x, rotationQ1.y, rotationQ1.z, rotationQ1.w );
+      rotationQ2.set( rx, ry, rz, rw );
 
       // reset the pose and rotate the reset pose
       worldRenderer.vrDisplay.resetPose();

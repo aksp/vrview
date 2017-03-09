@@ -13,7 +13,7 @@ var pauseshotchangeButton;
 var timelineSlider;
 var durationVideoPlayer;
 
-var PI_DENOMINATOR = 3.2;
+var PI_DENOMINATOR = 4;
 var FOV_RADIANS = 0.5;
 var circle_high = Math.PI + Math.PI/2;
 var circle_low = - Math.PI/2;
@@ -509,9 +509,30 @@ function updateSubtitle() {
   }
 }
 
+function setContentOrSeek(params, last_video_fn, next_video_fn) {
+  var lvs = last_video_fn.split("#t=");
+  var last_video_root = lvs[0];
+  var last_video_time = lvs[1];
+
+  var nvs = next_video_fn.split("#t=");
+  var next_video_root = nvs[0];
+  var next_video_time = nvs[1];
+
+  if (next_video_root === last_video_root) {
+    // seek
+    console.log("Seeking instead");
+    vrView.seek(next_video_time);
+  } else {
+    console.log("Setting content");
+    vrView.setContent(params);
+  }
+}
+
 function switchVideo(video_fn, video_type) {
   sts.cantChangeVideo = true;
+  var last_video_fn = sts.specs.current_video_fn;
   params = {};
+
   if (video_fn.indexOf("invasion") > -1) {
       params.is_stereo = true;
   } else {
@@ -529,7 +550,7 @@ function switchVideo(video_fn, video_type) {
     params.default_yaw_radians = sts.theta.current ;
 
     console.log(params);
-    vrView.setContent(params);
+    setContentOrSeek(params, last_video_fn, params.video);
     playButton.classList.remove('paused');
 
   } else if (video_type === "main") {
@@ -538,15 +559,14 @@ function switchVideo(video_fn, video_type) {
     sts.specs.current_video_fn = video_fn;
     params.video = video_fn + "#t=" + sts.currentTime;
     params.default_yaw_radians = sts.theta.current;
-    console.log(params);
 
-    vrView.setContent(params);
+    console.log(params);
+    setContentOrSeek(params, last_video_fn, params.video);
     playButton.classList.remove('paused');
-    
   } 
   setTimeout(function(){
     sts.cantChangeVideo = false;
-  }, 500)
+  }, 1000)
 }
 
 function isThetaInBoundary(cur_theta, imp_theta, poffset){
@@ -572,8 +592,7 @@ function isThetaInBoundary(cur_theta, imp_theta, poffset){
   return false;
 }
 
-function changeVideoBasedOnOrientation(){
-
+function withinAnyBoundary(){
   // get the possible orientations
   var orientations = sts.specs.possible_orientations;
   var current_orientation = sts.theta.current;
@@ -590,6 +609,11 @@ function changeVideoBasedOnOrientation(){
   } else {
     within_one_boundary = true;
   }
+  return within_one_boundary;
+}
+
+function changeVideoBasedOnOrientation(){
+  var within_one_boundary = withinAnyBoundary();
 
   // if we're in the boundary and not playing the main video
   // switch to the main video
