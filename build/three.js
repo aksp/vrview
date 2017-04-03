@@ -20597,13 +20597,33 @@ function WebGLRenderer( parameters ) {
 	this.startRecording = function(){
 		this.recording = true;
 	}
-	this.stopRecording = function(){
-		console.log(JSON.stringify(this.recordingOrientations));
-		this.recording = false;
+	this.stopRecording = function(out_filename){
+		// if we've specified a filename, go ahead and send it
+		if (out_filename) {
+			var json_out = JSON.stringify(this.recordingRenderInteractions);
+			var filename = out_filename;
+			var http = new XMLHttpRequest();
+
+			http.open("POST", "save_results.php", true);
+			http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			http.onreadystatechange = function() {//Call a function when the state changes.
+			    if(http.readyState == 4 && http.status == 200) {
+			        console.log(http.responseText);
+			    }
+			}
+			var sendString = "json=" + json_out +  "&filename=" + filename;
+			http.send(sendString);
+
+			this.recording = false;
+		} else {
+			console.log("No filename specified, showing the last interaction:")
+			console.log(this.recordingRenderInteractions[this.recordingRenderInteractions.length - 1])
+		}
+		// clear recording for next time
+		// this.recordingRenderInteractions = [];
 	}
 
 	// Rendering
-
 	this.render = function ( scene, camera, renderTarget, forceClear ) {
 
 		function calculateLatitudeLongitude(x,y,z,R){
@@ -20654,9 +20674,9 @@ function WebGLRenderer( parameters ) {
 				var lastDiffx = Math.abs(x - this.lastUVXY.x);
 				var lastDiffy = Math.abs(y - this.lastUVXY.y);
 				
-				// if (lastDiffx > .001 || lastDiffy > .001) {
+				if (lastDiffx > .005 || lastDiffy > .005) {
 				// if (lastDiffx > .01 || lastDiffy > .01) {
-				if (lastDiffx > -1 || lastDiffy > -1) {
+				// if (lastDiffx > -1 || lastDiffy > -1) {
 
 					// console.log(x + "," + y);
 					this.lastUVXY.x = x;
@@ -20704,10 +20724,10 @@ function WebGLRenderer( parameters ) {
 						timestamp: time,
 					});
 
-					this.recordingOrientations.push({
-						rotation: latlon.lon,
-						timestamp: time,
-					});
+					// this.recordingOrientations.push({
+					// 	rotation: latlon.lon,
+					// 	timestamp: time,
+					// });
 					//console.log(this.recordingRenderInteractions);
 				}
 			} else {

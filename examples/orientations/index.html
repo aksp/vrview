@@ -42,15 +42,30 @@
 
       <div class="row">
         <div class="col-md-1 col-md-offset-2">
-          <div id="currentTime">0</div>
+          <textarea rows="1" cols="10" id="currentTime">0</textarea>
         </div>
         <div class="col-md-6">
           <textarea id="spec-composer" style="width:100%" hidden></textarea>
         </div>
       </div>
 
-      <div class="row" id="button-row">
-        <br></br>
+      <div class="row" id="study-info">
+        <br>
+        <div class="col-md-2 col-md-offset-2">
+          <h4 id="study-i" style="display:inline"></h4>
+        </div>
+        <div class="col-md-2">
+          <h4 id="video-title" style="display:inline"></h4>
+        </div>
+        <div class="col-md-2">
+          <h4 id="condition" style="display:inline"></h4>
+        </div>
+        <div class="col-md-2" id="study-button-div">
+        </div>
+      </div>
+
+      <div class="row" id="button-row-1">
+        <br>
         <div class="col-md-3 col-md-offset-2">
             <button id="toggleorientation" class="btn btn-default btn-small">Switch viewpoint</button>
         </div>
@@ -58,7 +73,7 @@
             <button id="toggleforcedcuts" class="btn btn-default btn-small">Switch to forced cuts</button>
         </div>
         <div class="col-md-3">
-            <button id="togglesubtitles" class="btn btn-default btn-small">Turn off subtitles</button>
+            <button id="togglesubtitles" class="btn btn-default btn-small">Turn on subtitles</button>
         </div>
       </div>
 
@@ -79,6 +94,16 @@
 
         <div class="col-md-3">
             <button id="togglehistoryshotchange" class="btn btn-default btn-small">Turn on history shot change</button>
+        </div>
+      </div>
+
+      <div class="row" id="button-row-4">
+        <div class="col-md-3 col-md-offset-2">
+            <button id="toggleregularcuts" class="btn btn-default btn-small">Turn on regular cuts</button>
+        </div>
+
+        <div class="col-md-3">
+            <button id="toggleregulartitles" class="btn btn-default btn-small disabled">Turn on regular titles</button>
         </div>
       </div>
 

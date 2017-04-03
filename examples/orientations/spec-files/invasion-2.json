@@ -72,13 +72,15 @@
     "name": "establishing-shot", 
     "start": 9,
     "end": 55,
-    "video": "main"
+    "video": "main",
+    "i": 0
     }, 
     {
       "name": "main",
       "start": 55,
       "end": 999,
-      "video": "main"
+      "video": "main",
+      "i": 1
     }
   ], 
   "videos": [
@@ -91,6 +93,11 @@
       "fn": "establishing-shot-videos/invasion.mp4",
       "stereo": true,
       "name": "establishing-shot"
+    },
+    {
+      "fn": "videos/invasion.mp4",
+      "stereo": true,
+      "name": "regular-cuts"
     }
   ]
 }
