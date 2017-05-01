@@ -1,3 +1,7 @@
 .DS_Store
 *.swp
 *.swo
+examples/orientations/.ipynb_checkpoints/
+*.pyc
+examples/orientations/spec-files/
+examples/orientations/spec-files-shots/

@@ -1,0 +1,87 @@
+{
+  "subtitles": [],
+  "orientation": [
+    {
+      "start": 0.010914,
+      "end": 5.947764,
+      "orientations": [
+        0
+      ]
+    },
+    {
+      "start": 5.947764,
+      "end": 8.121414,
+      "orientations": [
+        0
+      ]
+    },
+    {
+      "start": 8.121414,
+      "end": 225.121005,
+      "orientations": [
+        1.4115349427214234,
+        -0.9992010349072036
+      ]
+    },
+    {
+      "start": 225.121005,
+      "end": 235.660603,
+      "orientations": [
+        -0.9512044248199651
+      ]
+    },
+    {
+      "start": 235.660603,
+      "end": 241.370507,
+      "orientations": [
+        -0.9512044248199651
+      ]
+    },
+    {
+      "start": 241.370507,
+      "end": 244.645,
+      "orientations": [
+        -0.9708394189749479
+      ]
+    },
+    {
+      "start": 244.645,
+      "orientations": [
+        -0.9708394189749479
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "name": "establishing-shot",
+      "start": 9,
+      "end": 55,
+      "video": "main",
+      "i": 0
+    },
+    {
+      "name": "main",
+      "start": 55,
+      "end": 999,
+      "video": "main",
+      "i": 1
+    }
+  ],
+  "videos": [
+    {
+      "fn": "videos/invasion.mp4",
+      "stereo": true,
+      "name": "main"
+    },
+    {
+      "fn": "establishing-shot-videos/invasion.mp4",
+      "stereo": true,
+      "name": "establishing-shot"
+    },
+    {
+      "fn": "videos/invasion.mp4",
+      "stereo": true,
+      "name": "regular-cuts"
+    }
+  ]
+}

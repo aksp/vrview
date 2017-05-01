@@ -20,7 +20,7 @@ var STUDY_URL_ROOT = "study-urls/";
 var PI_DENOMINATOR = 2.6;
 var FOV_RADIANS = 0.5;
 var TOGGLE_ORIENTATION_OFFSET = 1.0;
-var FRAME_INCREMENT = 0.033;
+var FRAME_INCREMENT = 0.01;
 var circle_high = Math.PI + Math.PI/2;
 var circle_low = - Math.PI/2;
 
@@ -76,6 +76,11 @@ sts = {
   cardboard_press_count: 0,
   playthrough: 0,
   recording_interactions: [],
+  map_condition: {
+    "forcedcuts": "Viewpoint-oriented cuts",
+    "optionalcuts": "Active reorientation",
+    "regularcuts": "Fixed-orientation cuts"
+  }
 };
 
 function getTimestamp(){
@@ -427,6 +432,10 @@ function hideOptionalButtons(){
   $(regulartitlesButton).hide();
   $(historyshotchangeButton).hide();
   $(pauseshotchangeButton).hide();
+
+  if (sts.specs.orientationbutton) {
+    $(orientationButton).show();
+  }
 }
 
 function addButtons() {
@@ -552,14 +561,8 @@ function fillOutStudyInfo(){
   var condition = sts.specs.opts;
   var study_i = sts.specs.study_i;
 
-  map_condition = {
-    "forcedcuts": "Viewpoint-based cuts",
-    "optionalcuts": "Interaction-based cuts",
-    "regularcuts": "Fixed cuts"
-  }
-
   $('#video-title').text(title);
-  $('#condition').text(map_condition[condition]);
+  $('#condition').text(sts.map_condition[condition]);
   $('#study-i').text(study_i);
 
   if (sts.specs.next_study_url) {
@@ -634,6 +637,15 @@ function onLoad() {
       });
     }
   } 
+
+  if (url.indexOf("demo.html") > -1) {
+    sts.specs.demo = true;
+    sts.specs.nobuttons = true;
+    $('#technique-title').text(sts.map_condition[sts.specs.opts]);
+    if (sts.specs.opts.indexOf("optionalcuts") >  -1) {
+      sts.specs.orientationbutton = true;
+    }
+  }
 
   if (sts.specs.fn && sts.specs.fn.toLowerCase().indexOf(".json") > -1) {
 
@@ -1224,8 +1236,9 @@ function isTouchCardboardButton(e) {
 }
 
 function onCardboardButtonPress() {
-  if (sts.specs.study 
-      && vrView.isPaused) {
+  // if (sts.specs.study 
+  //     && vrView.isPaused) {
+  if (vrView.isPaused) {
     onTogglePlay();
     recordInteraction("cardboardButtonPlay");
   } else if (sts.specs.mode === "optional_cuts") {

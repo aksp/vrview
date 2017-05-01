@@ -1,0 +1,101 @@
+{
+  "subtitles": [],
+  "orientation": [
+    {
+      "start": 5.492702,
+      "end": 7.783114,
+      "orientations": [
+        0
+      ]
+    },
+    {
+      "start": 7.783114,
+      "end": 9.094778,
+      "orientations": [
+        0
+      ]
+    },
+    {
+      "start": 9.094778,
+      "end": 10.529776,
+      "orientations": [
+        0
+      ]
+    },
+    {
+      "start": 10.529776,
+      "end": 11.950999,
+      "orientations": [
+        0.21966606019815327
+      ]
+    },
+    {
+      "start": 11.950999,
+      "end": 13.885,
+      "orientations": [
+        0.10799225481954045
+      ]
+    },
+    {
+      "start": 13.885,
+      "end": 17.51,
+      "orientations": [
+        0
+      ]
+    },
+    {
+      "start": 17.51,
+      "end": 19.428,
+      "orientations": [
+        0.0036815620449186515
+      ]
+    },
+    {
+      "start": 19.428,
+      "end": 21.974,
+      "orientations": [
+        0.0036815620449186515
+      ]
+    },
+    {
+      "start": 21.974,
+      "end": 25.731,
+      "orientations": [
+        0.0036815620449186515
+      ]
+    },
+    {
+      "start": 25.731,
+      "end": 28.412,
+      "orientations": [
+        1.0222448388788385
+      ]
+    },
+    {
+      "start": 28.412,
+      "end": 30.439999,
+      "orientations": [
+        1.0222448388788385
+      ]
+    },
+    {
+      "start": 30.439999,
+      "orientations": [
+        1.0222448388788385,
+        4.284101572178772
+      ]
+    }
+  ],
+  "videos": [
+    {
+      "fn": "videos/knives.mp4",
+      "stereo": false,
+      "name": "main"
+    },
+    {
+      "fn": "videos/knives.mp4",
+      "stereo": false,
+      "name": "regular-cuts"
+    }
+  ]
+}
