@@ -21,9 +21,9 @@ The video player with the ability to switch cuts is in the examples/orientations
 
 You'll also want to download the video I've been using here: https://people.eecs.berkeley.edu/~amypavel/vrview/examples/orientations/nocuts.MP4. You may have to change the video path in spec-files/nocuts.json.
 
+
 Branched from: VR View
 =======
-
 VR View allows you to embed 360 degree VR media into websites on desktop and
 mobile. For more information, please read the documentation available at
 <http://developers.google.com/cardboard/vrview>.
