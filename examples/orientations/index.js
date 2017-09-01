@@ -29,6 +29,7 @@ var url_opts = {
   regularsubtitles: onToggleRegularTitles,
   forcedcuts: onToggleForcedCuts,
   regularcuts: onToggleRegularCuts,
+  hybridcuts: onToggleHybridCuts,
   onpausecut: onTogglePauseShotChange,
   onhistorycut: onToggleHistoryShotChange,
   onorientationchangevideo: onToggleOrientationVideoChange,
@@ -79,6 +80,7 @@ sts = {
   map_condition: {
     "forcedcuts": "Viewpoint-oriented cuts",
     "optionalcuts": "Active reorientation",
+    "hybridcuts": "Hybrid active/viewpoint cuts",
     "regularcuts": "Fixed-orientation cuts"
   }
 };
@@ -642,7 +644,8 @@ function onLoad() {
     sts.specs.demo = true;
     sts.specs.nobuttons = true;
     $('#technique-title').text(sts.map_condition[sts.specs.opts]);
-    if (sts.specs.opts.indexOf("optionalcuts") >  -1) {
+    if (sts.specs.opts.indexOf("optionalcuts") >  -1 
+        || sts.specs.opts.indexOf("hybridcuts") >  -1) {
       sts.specs.orientationbutton = true;
     }
   }
@@ -1366,6 +1369,7 @@ function onToggleMute() {
 }
 
 function onToggleForcedCuts() {
+  console.log("Default: " + sts.specs.mode);
   if (sts.specs.mode === "forced_cuts") {
     sts.specs.mode = "optional_cuts";
     $(forcedcutsButton).text("Switch to forced cuts");
@@ -1393,6 +1397,11 @@ function onToggleRegularCuts() {
     $(forcedcutsButton).removeClass("disabled");
     $(orientationButton).removeClass("disabled");
   }
+}
+
+function onToggleHybridCuts() {
+  onToggleRegularCuts();
+  $(orientationButton).removeClass("disabled");
 }
 
 function onToggleRegularTitles() {
